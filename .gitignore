@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python
+ml-backend/.venv/
+ml-backend/__pycache__/
+ml-backend/**/__pycache__/
+ml-backend/app/models/*.pt
+ml-backend/app/models/*.pth
+ml-backend/app/models/*.onnx
+*.pyc
+
+# uploads
+/tmp/peace-uploads/

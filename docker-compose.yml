@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - ML_BACKEND_URL=http://ml-backend:8000
+    depends_on:
+      - ml-backend
+
+  ml-backend:
+    build:
+      context: ./ml-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PEACE_USE_MOCK_MODELS=true
+      - PEACE_DEBUG=true
+      - PEACE_CORS_ORIGINS=["http://localhost:3000"]
+    volumes:
+      - ./ml-backend/app/models:/app/models
