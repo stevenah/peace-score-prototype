@@ -2,9 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Upload, Clock, Activity, FileVideo } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { PEACE_SCORE_LABELS, PEACE_SCORE_COLORS } from "@/lib/constants";
 import type { PeaceScore } from "@/lib/types";
 
@@ -18,13 +16,6 @@ export default async function DashboardPage() {
     take: 20,
   });
 
-  const completedAnalyses = analyses.filter((a) => a.status === "completed");
-  const avgScore =
-    completedAnalyses.length > 0
-      ? completedAnalyses.reduce((sum, a) => sum + (a.overallScore ?? 0), 0) /
-        completedAnalyses.length
-      : null;
-
   return (
     <div className="space-y-8">
       <div>
@@ -36,57 +27,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="flex gap-3">
-        <Link href="/analyze">
-          <Button>
-            <Upload className="h-4 w-4" /> New Analysis
-          </Button>
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <div className="flex items-center gap-3 p-1">
-            <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950">
-              <FileVideo className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {analyses.length}
-              </p>
-              <p className="text-xs text-neutral-500">Total Analyses</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3 p-1">
-            <div className="rounded-lg bg-green-50 p-2 dark:bg-green-950">
-              <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {completedAnalyses.length}
-              </p>
-              <p className="text-xs text-neutral-500">Completed</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3 p-1">
-            <div className="rounded-lg bg-orange-50 p-2 dark:bg-orange-950">
-              <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                {avgScore !== null ? avgScore.toFixed(1) : "---"}
-              </p>
-              <p className="text-xs text-neutral-500">Avg PEACE Score</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <Card>
+<Card>
         <CardHeader>
           <CardTitle>Recent Analyses</CardTitle>
         </CardHeader>

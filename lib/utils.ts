@@ -1,4 +1,8 @@
 import type { PeaceScore } from "./types";
+
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "./constants";
 
 export function formatDuration(seconds: number): string {
@@ -25,9 +29,9 @@ export function getScoreLabel(score: PeaceScore): string {
   return PEACE_SCORE_LABELS[score];
 }
 
-export function cn(...classes: (string | undefined | false | null)[]): string {
-  return classes.filter(Boolean).join(" ");
-}
+// export function cn(...classes: (string | undefined | false | null)[]): string {
+//   return classes.filter(Boolean).join(" ");
+// }
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -35,4 +39,9 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }

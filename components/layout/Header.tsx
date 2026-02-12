@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/analyze", label: "Analyze", icon: Upload },
+  { href: "/analyze", label: "New Analysis", icon: Upload },
 ];
 
 export function Header() {

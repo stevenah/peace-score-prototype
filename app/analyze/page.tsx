@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { RotateCcw } from "lucide-react";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
@@ -10,7 +9,6 @@ import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
 import { ColonMap } from "@/components/scoring/ColonMap";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import { PEACE_SCORE_LABELS, REGION_LABELS, REGION_ORDER } from "@/lib/constants";
 import type {
@@ -24,7 +22,7 @@ import type {
 
 function computeRegionScores(
   results: LiveFrameResult[],
-): Partial<Record<AnatomicalRegion, RegionScore>> {
+): Partial<Record<AnatomicaAlRegion, RegionScore>> {
   const byRegion: Partial<Record<AnatomicalRegion, LiveFrameResult[]>> = {};
   for (const r of results) {
     const region = (r.region || "stomach") as AnatomicalRegion;
@@ -70,7 +68,6 @@ export default function AnalyzePage() {
     latestResult,
     results,
     sendFrame,
-    reset,
   } = useLiveFeed({
     enabled: isAnalyzing,
     wsUrl: "ws://localhost:8000/api/v1/ws/live",
@@ -81,13 +78,6 @@ export default function AnalyzePage() {
     setVideoEnded(false);
     setIsAnalyzing(true);
   }, []);
-
-  const handleReset = useCallback(() => {
-    setSelectedFile(null);
-    setIsAnalyzing(false);
-    setVideoEnded(false);
-    reset();
-  }, [reset]);
 
   const timeline: TimelineEntry[] = useMemo(
     () =>
@@ -146,6 +136,9 @@ export default function AnalyzePage() {
               onVideoReady={(d) => setVideoDuration(d)}
               onTimeUpdate={setCurrentVideoTime}
               captureIntervalMs={500}
+              peaceScore={displayResult ? displayResult.peace_score.score as PeaceScore : null}
+              motionDirection={displayResult?.motion ? displayResult.motion.direction as MotionDirection : null}
+              region={displayResult?.region || null}
             />
           ) : (
             <VideoUploader onFileSelect={handleFileSelect} />
@@ -287,25 +280,6 @@ export default function AnalyzePage() {
         )}
       </div>
 
-      {videoEnded && results.length > 0 && (
-        <Card className="text-center">
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-            Analysis complete
-          </p>
-          <p className="mt-1 text-xs text-neutral-400">
-            {results.length} frames analyzed &middot; Scrub or replay the video to review
-          </p>
-        </Card>
-      )}
-
-      {selectedFile && (
-        <div className="text-center">
-          <Button variant="ghost" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4" />
-            Analyze another video
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
