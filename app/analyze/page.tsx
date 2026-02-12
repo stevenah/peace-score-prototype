@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer } from "@/components/video/VideoStreamPlayer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
@@ -8,6 +9,8 @@ import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
 import { ColonMap } from "@/components/scoring/ColonMap";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import { PEACE_SCORE_LABELS, REGION_LABELS, REGION_ORDER } from "@/lib/constants";
 import type {
@@ -99,7 +102,7 @@ export default function AnalyzePage() {
   const regionScores = useMemo(() => computeRegionScores(results), [results]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
           Video Analysis
@@ -135,31 +138,30 @@ export default function AnalyzePage() {
               />
 
               {latestResult.motion && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+                <Card>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                     Motion
                   </p>
                   <MotionIndicator
                     direction={latestResult.motion.direction as MotionDirection}
                   />
-                </div>
+                </Card>
               )}
 
               {latestResult.region && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+                <Card>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                     Region
                   </p>
                   <p className="text-base font-medium capitalize text-neutral-900 dark:text-neutral-100">
                     {latestResult.region}
                   </p>
-                </div>
+                </Card>
               )}
             </>
           ) : (
             <>
-              {/* Empty PEACE Score placeholder */}
-              <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+              <Card>
                 <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   PEACE Score
                 </p>
@@ -172,27 +174,25 @@ export default function AnalyzePage() {
                 <p className="mt-0.5 text-base font-medium text-neutral-300 dark:text-neutral-600">
                   Awaiting analysis
                 </p>
-              </div>
+              </Card>
 
-              {/* Empty Motion placeholder */}
-              <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <Card>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Motion
                 </p>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
                   No data
                 </span>
-              </div>
+              </Card>
 
-              {/* Empty Region placeholder */}
-              <div className="flex-1 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <Card className="flex-1">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Region
                 </p>
                 <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
                   —
                 </p>
-              </div>
+              </Card>
             </>
           )}
         </div>
@@ -203,7 +203,7 @@ export default function AnalyzePage() {
         </div>
       </div>
 
-      {/* Score Timeline - empty state or with data */}
+      {/* Score Timeline */}
       {timeline.length > 2 ? (
         <PeaceScoreTimeline timeline={timeline} />
       ) : (
@@ -213,60 +213,62 @@ export default function AnalyzePage() {
               Score Timeline
             </h3>
           </div>
-          <div className="flex h-48 items-center justify-center rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+          <Card className="flex h-48 items-center justify-center">
             <p className="text-sm text-neutral-400">
               Timeline will appear as frames are analyzed
             </p>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Region Scores Grid - empty state or with data */}
-      {Object.keys(regionScores).length > 0 ? (
-        <PeaceScoreGrid byRegion={regionScores} />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {REGION_ORDER.map((region) => (
-            <div
-              key={region}
-              className="rounded-xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900"
-            >
-              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
-                {REGION_LABELS[region]}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-neutral-300 dark:text-neutral-600">
-                  —
-                </span>
-                <span className="text-sm text-neutral-300 dark:text-neutral-600">/ 3</span>
-              </div>
-              <p className="mt-0.5 text-sm font-medium text-neutral-300 dark:text-neutral-600">
-                No data
-              </p>
-            </div>
-          ))}
+      {/* Region Scores */}
+      <div>
+        <div className="mb-3">
+          <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            Region Scores
+          </h3>
         </div>
-      )}
+        {Object.keys(regionScores).length > 0 ? (
+          <PeaceScoreGrid byRegion={regionScores} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {REGION_ORDER.map((region) => (
+              <Card key={region}>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                  {REGION_LABELS[region]}
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-neutral-300 dark:text-neutral-600">
+                    —
+                  </span>
+                  <span className="text-sm text-neutral-300 dark:text-neutral-600">/ 3</span>
+                </div>
+                <p className="mt-0.5 text-sm font-medium text-neutral-300 dark:text-neutral-600">
+                  No data
+                </p>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       {videoEnded && results.length > 0 && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 text-center dark:border-neutral-800 dark:bg-neutral-900">
+        <Card className="text-center">
           <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
             Analysis complete
           </p>
           <p className="mt-1 text-xs text-neutral-400">
             {results.length} frames analyzed
           </p>
-        </div>
+        </Card>
       )}
 
       {selectedFile && (
         <div className="text-center">
-          <button
-            onClick={handleReset}
-            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
-          >
+          <Button variant="ghost" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4" />
             Analyze another video
-          </button>
+          </Button>
         </div>
       )}
     </div>
