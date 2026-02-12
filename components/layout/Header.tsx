@@ -3,19 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import {
-  Activity,
-  Upload,
-  LayoutDashboard,
-  LogOut,
-  User,
-} from "lucide-react";
+import { Activity, Upload, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "./ThemeToggle";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/analyze", label: "New Analysis", icon: Upload },
-];
+function getInitials(name?: string | null, email?: string | null): string {
+  if (name) {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  return email?.[0]?.toUpperCase() ?? "U";
+}
 
 export function Header() {
   const pathname = usePathname();
@@ -24,54 +36,71 @@ export function Header() {
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/80 backdrop-blur-sm dark:border-neutral-800 dark:bg-neutral-950/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+    <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <Activity className="h-6 w-6 text-blue-600" />
-          <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
-            PEACE Analyzer
-          </span>
+          <Activity className="h-6 w-6 text-primary" />
+          <span className="text-lg font-bold">PEACE Analyzer</span>
         </Link>
 
         {!isAuthPage && session && (
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" &&
-                  pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                      : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <Link
+              href="/analyze"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                pathname.startsWith("/analyze")
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Upload className="h-4 w-4" />
+              New Analysis
+            </Link>
 
-            <div className="ml-4 flex items-center gap-2 border-l border-neutral-200 pl-4 dark:border-neutral-700">
-              <span className="flex items-center gap-1.5 text-sm text-neutral-500">
-                <User className="h-3.5 w-3.5" />
-                {session.user?.name || session.user?.email}
-              </span>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Sign out
-              </button>
-            </div>
-          </nav>
+            <Separator orientation="vertical" className="mx-2 h-6" />
+
+            <ThemeToggle />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  <Avatar size="sm">
+                    <AvatarFallback>
+                      {getInitials(session.user?.name, session.user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    {session.user?.name && (
+                      <p className="text-sm font-medium leading-none">
+                        {session.user.name}
+                      </p>
+                    )}
+                    {session.user?.email && (
+                      <p className="text-xs text-muted-foreground leading-none">
+                        {session.user.email}
+                      </p>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {isAuthPage && (
+          <ThemeToggle />
         )}
       </div>
     </header>

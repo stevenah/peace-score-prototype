@@ -22,7 +22,7 @@ import type {
 
 function computeRegionScores(
   results: LiveFrameResult[],
-): Partial<Record<AnatomicaAlRegion, RegionScore>> {
+): Partial<Record<AnatomicalRegion, RegionScore>> {
   const byRegion: Partial<Record<AnatomicalRegion, LiveFrameResult[]>> = {};
   for (const r of results) {
     const region = (r.region || "stomach") as AnatomicalRegion;
