@@ -71,7 +71,7 @@ export function VideoUploader({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full flex-col space-y-4">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -81,7 +81,7 @@ export function VideoUploader({
         onDrop={handleDrop}
         onClick={() => !disabled && inputRef.current?.click()}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors",
+          "flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors",
           isDragOver
             ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
             : "border-neutral-300 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-600",

@@ -107,6 +107,29 @@ export interface LiveFrameResult {
   processing_time_ms: number;
 }
 
+// === Colon Segments ===
+
+export type ColonSegment =
+  | "rectum"
+  | "sigmoid"
+  | "descending"
+  | "splenic_flexure"
+  | "transverse"
+  | "hepatic_flexure"
+  | "ascending"
+  | "cecum";
+
+export const SEGMENT_LABELS: Record<ColonSegment, string> = {
+  rectum: "Rectum",
+  sigmoid: "Sigmoid",
+  descending: "Descending",
+  splenic_flexure: "Splenic Flexure",
+  transverse: "Transverse",
+  hepatic_flexure: "Hepatic Flexure",
+  ascending: "Ascending",
+  cecum: "Cecum",
+};
+
 // === Config ===
 
 export interface AnalysisConfig {
