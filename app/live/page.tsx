@@ -48,7 +48,7 @@ export default function LivePage() {
         </div>
         <Button
           onClick={handleToggle}
-          variant={isActive ? "secondary" : "primary"}
+          variant={isActive ? "secondary" : "default"}
         >
           {isActive ? (
             <>

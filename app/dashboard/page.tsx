@@ -1,10 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { PEACE_SCORE_LABELS, PEACE_SCORE_COLORS } from "@/lib/constants";
-import type { PeaceScore } from "@/lib/types";
+import { AnalysisRow } from "./AnalysisRow";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -17,7 +14,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
           Welcome back, {session.user.name || session.user.email}
@@ -27,43 +24,21 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-<Card>
-        <CardHeader>
-          <CardTitle>Recent Analyses</CardTitle>
-        </CardHeader>
-        <div className="px-6 pb-6">
-          {analyses.length === 0 ? (
-            <p className="py-8 text-center text-sm text-neutral-400">
-              No analyses yet. Upload a video to get started.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {analyses.map((analysis) => (
-                <Link
-                  key={analysis.id}
-                  href={`/results/${analysis.analysisId}`}
-                  className="flex items-center justify-between rounded-lg border border-neutral-100 p-4 transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                      {analysis.filename}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      {new Date(analysis.createdAt).toLocaleDateString()} at{" "}
-                      {new Date(analysis.createdAt).toLocaleTimeString()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-                      View
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+      <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+        Recent Analyses
+      </h2>
+
+      {analyses.length === 0 ? (
+        <p className="py-8 text-center text-sm text-neutral-400">
+          No analyses yet. Upload a video to get started.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {analyses.map((analysis) => (
+            <AnalysisRow key={analysis.id} analysis={analysis} />
+          ))}
         </div>
-      </Card>
+      )}
     </div>
   );
 }
