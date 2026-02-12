@@ -27,6 +27,8 @@ model AnalysisSession {
   overallScore   Int?
   framesAnalyzed Int?
   duration       Float?
+  timelineData   String?
+  videoPath      String?
   createdAt      DateTime  @default(now())
   completedAt    DateTime?
 }

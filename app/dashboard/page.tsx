@@ -54,29 +54,9 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {analysis.status === "completed" &&
-                    analysis.overallScore !== null ? (
-                      <span
-                        className="text-sm font-bold"
-                        style={{
-                          color:
-                            PEACE_SCORE_COLORS[
-                              analysis.overallScore as PeaceScore
-                            ],
-                        }}
-                      >
-                        {analysis.overallScore}/3{" "}
-                        {
-                          PEACE_SCORE_LABELS[
-                            analysis.overallScore as PeaceScore
-                          ]
-                        }
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                        {analysis.status}
-                      </span>
-                    )}
+                    <span className="rounded-md bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+                      View
+                    </span>
                   </div>
                 </Link>
               ))}

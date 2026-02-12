@@ -216,5 +216,19 @@ def create_pipeline() -> AnalysisPipeline:
             sample_rate_fps=settings.sample_rate_fps,
         )
     else:
-        # Future: load real models here
-        raise NotImplementedError("Real models not yet available")
+        from app.ml.real_models import (
+            ModelManager,
+            RealMotionDetector,
+            RealPEACEClassifier,
+            RealRegionDetector,
+            SessionState,
+        )
+
+        manager = ModelManager.get_instance(settings.model_path, settings.device)
+        session = SessionState()
+        return AnalysisPipeline(
+            classifier=RealPEACEClassifier(manager, session),
+            motion_detector=RealMotionDetector(session),
+            region_detector=RealRegionDetector(session),
+            sample_rate_fps=settings.sample_rate_fps,
+        )

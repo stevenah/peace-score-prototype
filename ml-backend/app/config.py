@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 500
     upload_dir: str = "/tmp/peace-uploads"
     cors_origins: list[str] = ["http://localhost:3000"]
+    model_path: str = ""
+    device: str = "auto"
 
     model_config = {"env_prefix": "PEACE_"}
 

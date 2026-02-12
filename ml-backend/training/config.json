@@ -1,0 +1,43 @@
+{
+    "dataset_path": "dataset/data-12-classes",
+    "output_dir": "experiments/multitask",
+    "image_size": 224,
+    "batch_size": 32,
+    "num_workers": 4,
+    "augmentation": {
+        "horizontal_flip": true,
+        "vertical_flip": false,
+        "random_rotation": 10,
+        "color_jitter": 0.1
+    },
+    "optimizer": {
+        "lr": 0.001,
+        "weight_decay": 0.0003
+    },
+    "scheduler": {
+        "patience": 5,
+        "factor": 0.2,
+        "mode": "min"
+    },
+    "training": {
+        "num_epochs": 1500,
+        "patience": 25,
+        "warmup_epochs": 10,
+        "save_interval": 5
+    },
+    "loss_weights": {
+        "region": 1.0,
+        "score": 1.0,
+        "score_ordinal": 0.3,
+        "motion": 0.5
+    },
+    "splits": {
+        "test_size": 0.2,
+        "val_size": 0.2,
+        "seed": 42
+    },
+    "model": {
+        "pretrained_backbone": true,
+        "freeze_backbone": true
+    }
+}

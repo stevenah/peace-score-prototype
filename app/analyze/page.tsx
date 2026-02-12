@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
+import { saveLiveAnalysis } from "@/lib/api-client";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
@@ -8,9 +10,10 @@ import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
 import { ColonMap } from "@/components/scoring/ColonMap";
-import { Card } from "@/components/ui/Card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import { PEACE_SCORE_LABELS, REGION_LABELS, REGION_ORDER } from "@/lib/constants";
+import { formatDuration } from "@/lib/utils";
 import type {
   PeaceScore,
   MotionDirection,
@@ -73,11 +76,43 @@ export default function AnalyzePage() {
     wsUrl: "ws://localhost:8000/api/v1/ws/live",
   });
 
+  const { data: sessionData } = useSession();
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
     setVideoEnded(false);
     setIsAnalyzing(true);
+    setIsSaved(false);
+    setSaveError(null);
   }, []);
+
+  // Auto-save when video ends and user is logged in
+  useEffect(() => {
+    if (!videoEnded || results.length === 0 || isSaved) return;
+    if (!sessionData?.user) return;
+
+    const overallScore = Math.min(...results.map((r) => r.peace_score.score));
+
+    saveLiveAnalysis({
+      filename: selectedFile?.name ?? "live-analysis",
+      overallScore,
+      framesAnalyzed: results.length,
+      duration: videoDuration > 0 ? videoDuration : null,
+      timeline: results.map((r, i) => ({
+        timestamp: i * 0.5,
+        frame_index: r.frame_index,
+        motion: r.motion?.direction || "stationary",
+        region: r.region || "stomach",
+        peace_score: r.peace_score.score,
+        confidence: r.peace_score.confidence,
+      })),
+      videoFile: selectedFile ?? undefined,
+    })
+      .then(() => setIsSaved(true))
+      .catch((err) => setSaveError(err.message));
+  }, [videoEnded, results, isSaved, sessionData, selectedFile, videoDuration]);
 
   const timeline: TimelineEntry[] = useMemo(
     () =>
@@ -121,6 +156,16 @@ export default function AnalyzePage() {
         <p className="mt-1 text-sm text-neutral-500">
           Upload an endoscopy video for real-time PEACE score analysis
         </p>
+        {isSaved && (
+          <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+            Analysis saved to your dashboard.
+          </p>
+        )}
+        {saveError && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            Failed to save analysis: {saveError}
+          </p>
+        )}
       </div>
 
       {/* Video + Live Scores + Colon Map */}
@@ -225,6 +270,37 @@ export default function AnalyzePage() {
           <ColonMap />
         </div>
       </div>
+
+      {/* Video Details */}
+      {selectedFile && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Video Details</CardTitle>
+          </CardHeader>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div>
+              <p className="text-xs text-neutral-500">Filename</p>
+              <p className="text-lg font-semibold truncate">{selectedFile.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Duration</p>
+              <p className="text-lg font-semibold">
+                {videoDuration > 0 ? formatDuration(videoDuration) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Frames Analyzed</p>
+              <p className="text-lg font-semibold">{results.length || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Status</p>
+              <p className="text-lg font-semibold">
+                {videoEnded ? "Complete" : isAnalyzing && isConnected ? "Analyzing" : "Waiting"}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Score Timeline */}
       {videoDuration > 0 ? (

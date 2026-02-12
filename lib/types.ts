@@ -84,6 +84,7 @@ export interface AnalysisResponse {
   created_at: string;
   completed_at?: string;
   error?: string;
+  video_url?: string | null;
 }
 
 // === Frame Analysis ===

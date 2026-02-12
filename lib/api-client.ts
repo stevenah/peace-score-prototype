@@ -33,7 +33,10 @@ export async function uploadVideo(file: File): Promise<{ analysis_id: string }> 
 }
 
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {
-  const response = await fetch(`${API_BASE}/analysis/${id}`);
+  const endpoint = id.startsWith("live_")
+    ? `${API_BASE}/analysis/live/${id}`
+    : `${API_BASE}/analysis/${id}`;
+  const response = await fetch(endpoint);
   return handleResponse(response);
 }
 
@@ -52,6 +55,36 @@ export async function analyzeFrame(
     body: formData,
   });
 
+  return handleResponse(response);
+}
+
+export async function saveLiveAnalysis(data: {
+  filename: string;
+  overallScore: number | null;
+  framesAnalyzed: number;
+  duration: number | null;
+  timeline: unknown[];
+  videoFile?: File;
+}): Promise<{ id: string; analysisId: string }> {
+  const formData = new FormData();
+  formData.append(
+    "metadata",
+    JSON.stringify({
+      filename: data.filename,
+      overallScore: data.overallScore,
+      framesAnalyzed: data.framesAnalyzed,
+      duration: data.duration,
+      timeline: data.timeline,
+    }),
+  );
+  if (data.videoFile) {
+    formData.append("video", data.videoFile);
+  }
+
+  const response = await fetch(`${API_BASE}/analysis/save-live`, {
+    method: "POST",
+    body: formData,
+  });
   return handleResponse(response);
 }
 
