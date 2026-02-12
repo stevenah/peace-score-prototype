@@ -19,9 +19,11 @@ import type { PeaceScore, TimelineEntry } from "@/lib/types";
 interface PeaceScoreTimelineProps {
   timeline: TimelineEntry[];
   totalDuration?: number;
+  currentTime?: number;
+  onSeek?: (time: number) => void;
 }
 
-export function PeaceScoreTimeline({ timeline, totalDuration }: PeaceScoreTimelineProps) {
+export function PeaceScoreTimeline({ timeline, totalDuration, currentTime, onSeek }: PeaceScoreTimelineProps) {
   const maxTime = totalDuration || (timeline.length > 0 ? timeline[timeline.length - 1].timestamp : 0);
 
   if (maxTime === 0) return null;
@@ -46,9 +48,16 @@ export function PeaceScoreTimeline({ timeline, totalDuration }: PeaceScoreTimeli
         </h3>
         <ScoreLegend />
       </div>
-      <div className="h-48 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className={`h-48 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 ${onSeek ? "cursor-pointer" : ""}`}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 5, right: 10, bottom: 5, left: -10 }}
+            onClick={onSeek ? (state) => {
+              const label = state?.activeLabel;
+              if (label != null) onSeek(typeof label === "number" ? label : parseFloat(String(label)));
+            } : undefined}
+          >
             <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
             <XAxis
               dataKey="time"
@@ -80,6 +89,9 @@ export function PeaceScoreTimeline({ timeline, totalDuration }: PeaceScoreTimeli
               }}
             />
             <ReferenceLine y={2} stroke="#84cc16" strokeDasharray="3 3" opacity={0.4} />
+            {currentTime != null && currentTime > 0 && (
+              <ReferenceLine x={currentTime} stroke="#3b82f6" strokeWidth={1.5} opacity={0.6} />
+            )}
             <Area
               type="stepAfter"
               dataKey="peace_score"

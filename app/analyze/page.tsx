@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { VideoUploader } from "@/components/video/VideoUploader";
-import { VideoStreamPlayer } from "@/components/video/VideoStreamPlayer";
+import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
 import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
@@ -58,10 +58,12 @@ function computeRegionScores(
 }
 
 export default function AnalyzePage() {
+  const playerRef = useRef<VideoStreamPlayerHandle>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
 
   const {
     isConnected,
@@ -100,6 +102,24 @@ export default function AnalyzePage() {
     [results],
   );
 
+  // When scrubbing or replaying, show the result closest to the current video time
+  const displayResult = useMemo(() => {
+    if (results.length === 0) return null;
+    // During live analysis (not ended), always show latest
+    if (!videoEnded) return latestResult;
+    // Find the result closest to current playback time
+    let best = results[0];
+    let bestDist = Math.abs(best.frame_index * 0.5 - currentVideoTime);
+    for (let i = 1; i < results.length; i++) {
+      const dist = Math.abs(results[i].frame_index * 0.5 - currentVideoTime);
+      if (dist < bestDist) {
+        best = results[i];
+        bestDist = dist;
+      }
+    }
+    return best;
+  }, [results, latestResult, videoEnded, currentVideoTime]);
+
   const regionScores = useMemo(() => computeRegionScores(results), [results]);
 
   return (
@@ -118,11 +138,13 @@ export default function AnalyzePage() {
         <div className="lg:col-span-2">
           {selectedFile ? (
             <VideoStreamPlayer
+              ref={playerRef}
               file={selectedFile}
               isAnalyzing={isAnalyzing && isConnected}
               onFrameCapture={sendFrame}
               onVideoEnd={() => setVideoEnded(true)}
               onVideoReady={(d) => setVideoDuration(d)}
+              onTimeUpdate={setCurrentVideoTime}
               captureIntervalMs={500}
             />
           ) : (
@@ -131,32 +153,32 @@ export default function AnalyzePage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {latestResult ? (
+          {displayResult ? (
             <>
               <PeaceScoreCard
-                score={latestResult.peace_score.score as PeaceScore}
-                label={latestResult.peace_score.label}
+                score={displayResult.peace_score.score as PeaceScore}
+                label={displayResult.peace_score.label}
                 size="lg"
               />
 
-              {latestResult.motion && (
+              {displayResult.motion && (
                 <Card>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                     Motion
                   </p>
                   <MotionIndicator
-                    direction={latestResult.motion.direction as MotionDirection}
+                    direction={displayResult.motion.direction as MotionDirection}
                   />
                 </Card>
               )}
 
-              {latestResult.region && (
+              {displayResult.region && (
                 <Card>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                     Region
                   </p>
                   <p className="text-base font-medium capitalize text-neutral-900 dark:text-neutral-100">
-                    {latestResult.region}
+                    {displayResult.region}
                   </p>
                 </Card>
               )}
@@ -213,7 +235,12 @@ export default function AnalyzePage() {
 
       {/* Score Timeline */}
       {videoDuration > 0 ? (
-        <PeaceScoreTimeline timeline={timeline} totalDuration={videoDuration} />
+        <PeaceScoreTimeline
+          timeline={timeline}
+          totalDuration={videoDuration}
+          currentTime={currentVideoTime}
+          onSeek={(t) => playerRef.current?.seekTo(t)}
+        />
       ) : (
         <div>
           <div className="mb-3 flex items-center justify-between">
@@ -266,7 +293,7 @@ export default function AnalyzePage() {
             Analysis complete
           </p>
           <p className="mt-1 text-xs text-neutral-400">
-            {results.length} frames analyzed
+            {results.length} frames analyzed &middot; Scrub or replay the video to review
           </p>
         </Card>
       )}

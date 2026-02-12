@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Progress } from "@/components/ui/Progress";
 import { formatDuration } from "@/lib/utils";
+
+export interface VideoStreamPlayerHandle {
+  seekTo: (time: number) => void;
+}
 
 interface VideoStreamPlayerProps {
   file: File;
@@ -13,25 +16,39 @@ interface VideoStreamPlayerProps {
   onPlayStateChange?: (playing: boolean) => void;
   onVideoEnd?: () => void;
   onVideoReady?: (duration: number) => void;
+  onTimeUpdate?: (time: number) => void;
   captureIntervalMs?: number;
 }
 
-export function VideoStreamPlayer({
+export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStreamPlayerProps>(function VideoStreamPlayer({
   file,
   isAnalyzing,
   onFrameCapture,
   onPlayStateChange,
   onVideoEnd,
   onVideoReady,
+  onTimeUpdate,
   captureIntervalMs = 500,
-}: VideoStreamPlayerProps) {
+}, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrubRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    seekTo(time: number) {
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime = time;
+      setCurrentTime(time);
+      onTimeUpdate?.(time);
+    },
+  }), [onTimeUpdate]);
 
   // Create object URL for the file
   useEffect(() => {
@@ -108,6 +125,49 @@ export function VideoStreamPlayer({
     onPlayStateChange?.(true);
   }
 
+  const seekTo = useCallback((fraction: number) => {
+    const video = videoRef.current;
+    if (!video || duration === 0) return;
+    const t = Math.max(0, Math.min(1, fraction)) * duration;
+    video.currentTime = t;
+    setCurrentTime(t);
+    onTimeUpdate?.(t);
+  }, [duration, onTimeUpdate]);
+
+  const handleScrubFromEvent = useCallback(
+    (e: React.MouseEvent | MouseEvent) => {
+      const bar = scrubRef.current;
+      if (!bar) return;
+      const rect = bar.getBoundingClientRect();
+      const fraction = (e.clientX - rect.left) / rect.width;
+      seekTo(fraction);
+    },
+    [seekTo],
+  );
+
+  const handleScrubStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsScrubbing(true);
+      const wasPlaying = isPlaying;
+      videoRef.current?.pause();
+      handleScrubFromEvent(e);
+
+      const onMove = (ev: MouseEvent) => handleScrubFromEvent(ev);
+      const onUp = () => {
+        setIsScrubbing(false);
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        if (wasPlaying) {
+          videoRef.current?.play();
+        }
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [isPlaying, handleScrubFromEvent],
+  );
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
@@ -126,7 +186,11 @@ export function VideoStreamPlayer({
               setDuration(d);
               onVideoReady?.(d);
             }}
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+            onTimeUpdate={(e) => {
+              const t = e.currentTarget.currentTime;
+              setCurrentTime(t);
+              if (!isScrubbing) onTimeUpdate?.(t);
+            }}
             onPlay={() => {
               setIsPlaying(true);
               onPlayStateChange?.(true);
@@ -175,8 +239,25 @@ export function VideoStreamPlayer({
           <RotateCcw className="h-4 w-4" />
         </Button>
 
-        <div className="flex-1">
-          <Progress value={progress} color={isAnalyzing ? "#3b82f6" : "#9ca3af"} />
+        <div
+          ref={scrubRef}
+          className="group relative flex-1 cursor-pointer py-1"
+          onMouseDown={handleScrubStart}
+        >
+          <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+            <div
+              className="h-full rounded-full transition-[width] duration-100 ease-linear"
+              style={{
+                width: `${progress}%`,
+                backgroundColor: isAnalyzing ? "#3b82f6" : "#9ca3af",
+              }}
+            />
+          </div>
+          {/* Scrub thumb */}
+          <div
+            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-neutral-600 opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-neutral-800 dark:bg-neutral-300"
+            style={{ left: `${progress}%` }}
+          />
         </div>
 
         <span className="text-xs tabular-nums text-neutral-500">
@@ -185,4 +266,4 @@ export function VideoStreamPlayer({
       </div>
     </div>
   );
-}
+});
