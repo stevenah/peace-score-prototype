@@ -170,7 +170,7 @@ export default function AnalyzePage() {
 
       {/* Video + Live Scores + Colon Map */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           {selectedFile ? (
             <VideoStreamPlayer
               ref={playerRef}
@@ -265,14 +265,14 @@ export default function AnalyzePage() {
           )}
         </div>
 
-        {/* Colon Map */}
-        <div className="flex">
+        {/* Colon Map (DISABLED) */}
+        {/* <div className="flex">
           <ColonMap />
-        </div>
-      </div>
+        </div> */}
+    </div>
 
-      {/* Video Details */}
-      {selectedFile && (
+      {/* Video Details (DISABLED) */}
+      {/* {selectedFile && (
         <Card>
           <CardHeader>
             <CardTitle>Video Details</CardTitle>
@@ -300,7 +300,7 @@ export default function AnalyzePage() {
             </div>
           </div>
         </Card>
-      )}
+      )} */}
 
       {/* Score Timeline */}
       {videoDuration > 0 ? (
@@ -325,8 +325,8 @@ export default function AnalyzePage() {
         </div>
       )}
 
-      {/* Region Scores */}
-      <div>
+      {/* Region Scores (DISABLED) */}
+      {/* <div>
         <div className="mb-3">
           <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
             Region Scores
@@ -354,7 +354,7 @@ export default function AnalyzePage() {
             ))}
           </div>
         )}
-      </div>
+      </div> */}
 
     </div>
   );

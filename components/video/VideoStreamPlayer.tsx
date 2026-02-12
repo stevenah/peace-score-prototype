@@ -46,6 +46,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   const scrubRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analyzedBucketsRef = useRef<Set<number>>(new Set());
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -101,6 +102,11 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     const canvas = canvasRef.current;
     if (!video || !canvas || video.paused || video.ended) return;
 
+    // Quantize to capture interval to avoid re-analyzing the same time bucket
+    const bucket = Math.floor(video.currentTime * 1000 / captureIntervalMs);
+    if (analyzedBucketsRef.current.has(bucket)) return;
+    analyzedBucketsRef.current.add(bucket);
+
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d");
@@ -114,7 +120,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
       "image/jpeg",
       0.8,
     );
-  }, [onFrameCapture]);
+  }, [onFrameCapture, captureIntervalMs]);
 
   function handlePlay() {
     const video = videoRef.current;
