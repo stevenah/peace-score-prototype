@@ -171,26 +171,32 @@ export default function AnalyzePage() {
                   </span>
                   <span className="text-sm text-neutral-300 dark:text-neutral-600">/ 3</span>
                 </div>
-                <p className="mt-0.5 text-base font-medium text-neutral-300 dark:text-neutral-600">
-                  Awaiting analysis
+                <p className="mt-0.5 text-sm font-medium text-neutral-300 dark:text-neutral-600">
+                  No data
                 </p>
               </Card>
 
               <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Motion
                 </p>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500">
+                <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
+                  —
+                </p>
+                <p className="mt-0.5 text-sm text-neutral-300 dark:text-neutral-600">
                   No data
-                </span>
+                </p>
               </Card>
 
               <Card className="flex-1">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Region
                 </p>
                 <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
                   —
+                </p>
+                <p className="mt-0.5 text-sm text-neutral-300 dark:text-neutral-600">
+                  No data
                 </p>
               </Card>
             </>
