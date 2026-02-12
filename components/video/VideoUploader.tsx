@@ -1,25 +1,20 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload, Film, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatFileSize } from "@/lib/utils";
 import { ALLOWED_VIDEO_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 
 interface VideoUploaderProps {
   onFileSelect: (file: File) => void;
-  isUploading?: boolean;
   disabled?: boolean;
 }
 
 export function VideoUploader({
   onFileSelect,
-  isUploading,
   disabled,
 }: VideoUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,9 +36,9 @@ export function VideoUploader({
         return;
       }
       setError(null);
-      setSelectedFile(file);
+      onFileSelect(file);
     },
-    [validateFile],
+    [validateFile, onFileSelect],
   );
 
   const handleDrop = useCallback(
@@ -63,12 +58,6 @@ export function VideoUploader({
     },
     [handleFile],
   );
-
-  const handleClear = () => {
-    setSelectedFile(null);
-    setError(null);
-    if (inputRef.current) inputRef.current.value = "";
-  };
 
   return (
     <div className="flex h-full flex-col space-y-4">
@@ -114,44 +103,6 @@ export function VideoUploader({
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      {selectedFile && !error && (
-        <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="flex items-center gap-3">
-            <Film className="h-5 w-5 text-blue-600" />
-            <div>
-              <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {selectedFile.name}
-              </p>
-              <p className="text-xs text-neutral-500">
-                {formatFileSize(selectedFile.size)}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClear();
-              }}
-              disabled={isUploading}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFileSelect(selectedFile);
-              }}
-              disabled={isUploading}
-            >
-              {isUploading ? "Uploading..." : "Analyze"}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
