@@ -61,6 +61,7 @@ export default function AnalyzePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
 
   const {
     isConnected,
@@ -121,6 +122,7 @@ export default function AnalyzePage() {
               isAnalyzing={isAnalyzing && isConnected}
               onFrameCapture={sendFrame}
               onVideoEnd={() => setVideoEnded(true)}
+              onVideoReady={(d) => setVideoDuration(d)}
               captureIntervalMs={500}
             />
           ) : (
@@ -210,8 +212,8 @@ export default function AnalyzePage() {
       </div>
 
       {/* Score Timeline */}
-      {timeline.length > 2 ? (
-        <PeaceScoreTimeline timeline={timeline} />
+      {videoDuration > 0 ? (
+        <PeaceScoreTimeline timeline={timeline} totalDuration={videoDuration} />
       ) : (
         <div>
           <div className="mb-3 flex items-center justify-between">

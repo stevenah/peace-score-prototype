@@ -18,17 +18,25 @@ import type { PeaceScore, TimelineEntry } from "@/lib/types";
 
 interface PeaceScoreTimelineProps {
   timeline: TimelineEntry[];
+  totalDuration?: number;
 }
 
-export function PeaceScoreTimeline({ timeline }: PeaceScoreTimelineProps) {
-  if (timeline.length === 0) return null;
+export function PeaceScoreTimeline({ timeline, totalDuration }: PeaceScoreTimelineProps) {
+  const maxTime = totalDuration || (timeline.length > 0 ? timeline[timeline.length - 1].timestamp : 0);
 
-  const data = timeline.map((entry) => ({
+  if (maxTime === 0) return null;
+
+  const points = timeline.map((entry) => ({
     ...entry,
-    time: formatTimestamp(entry.timestamp),
+    time: entry.timestamp,
     scoreColor: PEACE_SCORE_COLORS[entry.peace_score as PeaceScore],
     motionColor: MOTION_COLORS[entry.motion],
   }));
+
+  // Recharts needs data points to render axes/grid, so add invisible boundaries
+  const data = points.length > 0
+    ? points
+    : [{ time: 0 }, { time: maxTime }];
 
   return (
     <div>
@@ -44,6 +52,9 @@ export function PeaceScoreTimeline({ timeline }: PeaceScoreTimelineProps) {
             <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
             <XAxis
               dataKey="time"
+              type="number"
+              domain={[0, maxTime]}
+              tickFormatter={(v: number) => formatTimestamp(v)}
               tick={{ fontSize: 10 }}
               interval="preserveStartEnd"
             />
@@ -75,12 +86,14 @@ export function PeaceScoreTimeline({ timeline }: PeaceScoreTimelineProps) {
               stroke="none"
               fill="#3b82f6"
               fillOpacity={0.08}
+              isAnimationActive={false}
             />
             <Line
               type="monotone"
               dataKey="peace_score"
               stroke="#3b82f6"
               strokeWidth={2}
+              isAnimationActive={false}
               dot={(props: Record<string, unknown>) => {
                 const { cx, cy, payload } = props as {
                   cx: number;
