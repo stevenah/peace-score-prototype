@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id             String            @id @default(cuid())
+  name           String?
+  email          String            @unique
+  hashedPassword String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  analyses       AnalysisSession[]
+}
+
+model AnalysisSession {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisId     String    @unique
+  filename       String
+  status         String    @default("processing")
+  overallScore   Int?
+  framesAnalyzed Int?
+  duration       Float?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+}

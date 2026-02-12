@@ -1,13 +1,11 @@
 "use client";
 
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   PEACE_SCORE_COLORS,
   PEACE_SCORE_LABELS,
   REGION_LABELS,
   REGION_ORDER,
 } from "@/lib/constants";
-import { formatConfidence } from "@/lib/utils";
 import type { AnatomicalRegion, PeaceScore, RegionScore } from "@/lib/types";
 
 interface RegionMapProps {
@@ -31,67 +29,62 @@ const regionPaths: Record<AnatomicalRegion, { d: string; labelY: number }> = {
 
 export function RegionMap({ byRegion }: RegionMapProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Anatomical Region Scores</CardTitle>
-      </CardHeader>
-      <div className="flex items-center justify-center gap-8">
-        <svg viewBox="40 10 200 260" className="h-64 w-48">
-          {REGION_ORDER.map((region) => {
-            const data = byRegion[region];
-            const path = regionPaths[region];
-            const color = data
-              ? PEACE_SCORE_COLORS[data.score as PeaceScore]
-              : "#d4d4d4";
+    <div className="flex items-center justify-center gap-8">
+      <svg viewBox="40 10 200 260" className="h-56 w-44">
+        {REGION_ORDER.map((region) => {
+          const data = byRegion[region];
+          const path = regionPaths[region];
+          const color = data
+            ? PEACE_SCORE_COLORS[data.score as PeaceScore]
+            : "#d4d4d4";
 
-            return (
-              <g key={region}>
-                <path
-                  d={path.d}
-                  fill={color}
-                  fillOpacity={0.3}
-                  stroke={color}
-                  strokeWidth={2}
-                />
-                <text
-                  x={region === "duodenum" ? 195 : 120}
-                  y={path.labelY}
-                  textAnchor="middle"
-                  className="text-[9px] font-medium"
-                  fill="currentColor"
-                >
-                  {REGION_LABELS[region]}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+          return (
+            <g key={region}>
+              <path
+                d={path.d}
+                fill={color}
+                fillOpacity={0.3}
+                stroke={color}
+                strokeWidth={2}
+              />
+              <text
+                x={region === "duodenum" ? 195 : 120}
+                y={path.labelY}
+                textAnchor="middle"
+                className="text-[9px] font-medium"
+                fill="currentColor"
+              >
+                {REGION_LABELS[region]}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
 
-        <div className="space-y-3">
-          {REGION_ORDER.map((region) => {
-            const data = byRegion[region];
-            if (!data) return null;
-            const color = PEACE_SCORE_COLORS[data.score as PeaceScore];
-            return (
-              <div key={region} className="flex items-center gap-3">
-                <div
-                  className="h-4 w-4 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <div>
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                    {REGION_LABELS[region]}: {data.score}/3
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    {PEACE_SCORE_LABELS[data.score as PeaceScore]} &middot;{" "}
-                    {formatConfidence(data.confidence)}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <div className="space-y-2.5">
+        {REGION_ORDER.map((region) => {
+          const data = byRegion[region];
+          if (!data) return null;
+          const color = PEACE_SCORE_COLORS[data.score as PeaceScore];
+          return (
+            <div key={region} className="flex items-center gap-2.5">
+              <div
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                {REGION_LABELS[region]}:{" "}
+                <span className="font-medium" style={{ color }}>
+                  {data.score}/3
+                </span>{" "}
+                <span className="text-neutral-400">
+                  {PEACE_SCORE_LABELS[data.score as PeaceScore]}
+                </span>
+              </span>
+            </div>
+          );
+        })}
       </div>
-    </Card>
+    </div>
   );
 }

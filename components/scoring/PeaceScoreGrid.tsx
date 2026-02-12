@@ -16,7 +16,6 @@ export function PeaceScoreGrid({ byRegion }: PeaceScoreGridProps) {
           <PeaceScoreCard
             key={region}
             score={data.score as PeaceScore}
-            confidence={data.confidence}
             label={data.label}
             region={REGION_LABELS[region]}
           />

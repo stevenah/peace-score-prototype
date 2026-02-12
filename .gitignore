@@ -49,5 +49,10 @@ ml-backend/app/models/*.pth
 ml-backend/app/models/*.onnx
 *.pyc
 
+# prisma
+prisma/dev.db
+prisma/dev.db-journal
+/generated/
+
 # uploads
 /tmp/peace-uploads/

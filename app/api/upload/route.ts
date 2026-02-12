@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ML_BACKEND_URL } from "@/lib/constants";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -28,6 +32,19 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+
+    // Save analysis session if user is authenticated
+    if (session?.user?.id && data.analysis_id) {
+      await prisma.analysisSession.create({
+        data: {
+          userId: session.user.id,
+          analysisId: data.analysis_id,
+          filename: file instanceof File ? file.name : "unknown",
+          status: "processing",
+        },
+      });
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Upload error:", error);

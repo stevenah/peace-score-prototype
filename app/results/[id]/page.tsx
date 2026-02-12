@@ -70,7 +70,6 @@ export default function ResultsPage({
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <PeaceScoreCard
               score={results.peace_scores.overall.score as PeaceScore}
-              confidence={results.peace_scores.overall.confidence}
               label={results.peace_scores.overall.label}
               size="lg"
             />
@@ -132,7 +131,6 @@ export default function ResultsPage({
                   >
                     <MotionIndicator
                       direction={seg.direction as MotionDirection}
-                      size="sm"
                     />
                     <span className="text-xs text-neutral-500">
                       {formatDuration(seg.start_time)} →{" "}
