@@ -72,15 +72,24 @@ export default function DashboardPage() {
     }
   }, [authStatus, router, fetchAnalyses]);
 
-  // Auto-refresh every 5s if any jobs are in-progress
+  // Auto-refresh if any jobs are in-progress, with backoff
   const hasActiveJobs = analyses.some(
     (a) => a.status === "processing" || a.status === "queued",
   );
 
   useEffect(() => {
     if (!hasActiveJobs) return;
-    const interval = setInterval(fetchAnalyses, 5000);
-    return () => clearInterval(interval);
+    let delay = 5000;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = () => {
+      timer = setTimeout(async () => {
+        await fetchAnalyses();
+        delay = Math.min(delay * 1.5, 30000);
+        poll();
+      }, delay);
+    };
+    poll();
+    return () => clearTimeout(timer);
   }, [hasActiveJobs, fetchAnalyses]);
 
   // Filter

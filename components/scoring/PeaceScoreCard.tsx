@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
 import type { PeaceScore } from "@/lib/types";
 
@@ -8,7 +9,7 @@ interface PeaceScoreCardProps {
   size?: "sm" | "lg";
 }
 
-export function PeaceScoreCard({
+export const PeaceScoreCard = memo(function PeaceScoreCard({
   score,
   label,
   region,
@@ -41,4 +42,4 @@ export function PeaceScoreCard({
       </p>
     </div>
   );
-}
+});

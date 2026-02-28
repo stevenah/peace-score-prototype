@@ -122,7 +122,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     );
   }, [onFrameCapture, captureIntervalMs]);
 
-  function handlePlay() {
+  const handlePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -133,22 +133,22 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     video.play();
     setIsPlaying(true);
     onPlayStateChange?.(true);
-  }
+  }, [onPlayStateChange]);
 
-  function handlePause() {
+  const handlePause = useCallback(() => {
     videoRef.current?.pause();
     setIsPlaying(false);
     onPlayStateChange?.(false);
-  }
+  }, [onPlayStateChange]);
 
-  function handleRestart() {
+  const handleRestart = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = 0;
     video.play();
     setIsPlaying(true);
     onPlayStateChange?.(true);
-  }
+  }, [onPlayStateChange]);
 
   const seekTo = useCallback((fraction: number) => {
     const video = videoRef.current;

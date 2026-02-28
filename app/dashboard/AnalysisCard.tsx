@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { memo, useState, useTransition } from "react";
 import {
   Clock,
   CheckCircle2,
@@ -30,7 +30,7 @@ import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
 import { formatDuration } from "@/lib/utils";
 import type { PeaceScore, AnalysisRecord } from "@/lib/types";
 
-function StatusBadge({ status }: { status: string }) {
+const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "queued":
       return (
@@ -63,9 +63,9 @@ function StatusBadge({ status }: { status: string }) {
     default:
       return null;
   }
-}
+});
 
-export function AnalysisCard({
+export const AnalysisCard = memo(function AnalysisCard({
   analysis,
   onDelete,
 }: {
@@ -210,4 +210,4 @@ export function AnalysisCard({
       </div>
     </Card>
   );
-}
+});

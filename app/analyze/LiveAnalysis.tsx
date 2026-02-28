@@ -10,50 +10,12 @@ import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
 import { Card } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
-import { PEACE_SCORE_LABELS, REGION_ORDER } from "@/lib/constants";
 import type {
   PeaceScore,
   MotionDirection,
   AnatomicalRegion,
   TimelineEntry,
-  RegionScore,
-  LiveFrameResult,
 } from "@/lib/types";
-
-function computeRegionScores(
-  results: LiveFrameResult[],
-): Partial<Record<AnatomicalRegion, RegionScore>> {
-  const byRegion: Partial<Record<AnatomicalRegion, LiveFrameResult[]>> = {};
-  for (const r of results) {
-    const region = (r.region || "stomach") as AnatomicalRegion;
-    if (!byRegion[region]) byRegion[region] = [];
-    byRegion[region]!.push(r);
-  }
-
-  const scores: Partial<Record<AnatomicalRegion, RegionScore>> = {};
-  for (const region of REGION_ORDER) {
-    const frames = byRegion[region];
-    if (!frames || frames.length === 0) continue;
-    const minScore = Math.min(
-      ...frames.map((f) => f.peace_score.score),
-    ) as PeaceScore;
-    const avgConf =
-      frames.reduce((s, f) => s + f.peace_score.confidence, 0) / frames.length;
-    scores[region] = {
-      score: minScore,
-      label: PEACE_SCORE_LABELS[minScore],
-      confidence: Math.round(avgConf * 100) / 100,
-      region,
-      frame_scores: frames.map((f, i) => ({
-        frame_index: f.frame_index,
-        timestamp: i,
-        score: f.peace_score.score as PeaceScore,
-        confidence: f.peace_score.confidence,
-      })),
-    };
-  }
-  return scores;
-}
 
 const CAPTURE_INTERVAL_MS = 500;
 const CAPTURE_INTERVAL_S = CAPTURE_INTERVAL_MS / 1000;
@@ -153,8 +115,6 @@ export function LiveAnalysis() {
     return best;
   }, [results, latestResult, videoEnded, currentVideoTime]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const regionScores = useMemo(() => computeRegionScores(results), [results]);
 
   return (
     <div className="space-y-8">
