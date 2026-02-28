@@ -76,9 +76,17 @@ export default function AnalyzePage() {
     wsUrl: "ws://localhost:8000/api/v1/ws/live",
   });
 
+  // Track actual video time for each captured frame so timeline stays in sync
+  const [captureTimes, setCaptureTimes] = useState<number[]>([]);
+
   const { data: sessionData } = useSession();
   const [isSaved, setIsSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const handleFrameCapture = useCallback((blob: Blob, videoTime: number) => {
+    setCaptureTimes((prev) => [...prev, videoTime]);
+    sendFrame(blob);
+  }, [sendFrame]);
 
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
@@ -86,6 +94,7 @@ export default function AnalyzePage() {
     setIsAnalyzing(true);
     setIsSaved(false);
     setSaveError(null);
+    setCaptureTimes([]);
   }, []);
 
   // Auto-save when video ends and user is logged in
@@ -101,7 +110,7 @@ export default function AnalyzePage() {
       framesAnalyzed: results.length,
       duration: videoDuration > 0 ? videoDuration : null,
       timeline: results.map((r, i) => ({
-        timestamp: i * 0.5,
+        timestamp: captureTimes[i] ?? i * 0.5,
         frame_index: r.frame_index,
         motion: r.motion?.direction || "stationary",
         region: r.region || "stomach",
@@ -112,19 +121,19 @@ export default function AnalyzePage() {
     })
       .then(() => setIsSaved(true))
       .catch((err) => setSaveError(err.message));
-  }, [videoEnded, results, isSaved, sessionData, selectedFile, videoDuration]);
+  }, [videoEnded, results, isSaved, sessionData, selectedFile, videoDuration, captureTimes]);
 
   const timeline: TimelineEntry[] = useMemo(
     () =>
       results.map((r, i) => ({
-        timestamp: i * 0.5,
+        timestamp: captureTimes[i] ?? i * 0.5,
         frame_index: r.frame_index,
         motion: (r.motion?.direction || "stationary") as MotionDirection,
         region: (r.region || "stomach") as AnatomicalRegion,
         peace_score: r.peace_score.score as PeaceScore,
         confidence: r.peace_score.confidence,
       })),
-    [results],
+    [results, captureTimes],
   );
 
   // When scrubbing or replaying, show the result closest to the current video time
@@ -176,7 +185,7 @@ export default function AnalyzePage() {
               ref={playerRef}
               file={selectedFile}
               isAnalyzing={isAnalyzing && isConnected}
-              onFrameCapture={sendFrame}
+              onFrameCapture={handleFrameCapture}
               onVideoEnd={() => setVideoEnded(true)}
               onVideoReady={(d) => setVideoDuration(d)}
               onTimeUpdate={setCurrentVideoTime}
@@ -224,7 +233,7 @@ export default function AnalyzePage() {
           ) : (
             <>
               <Card>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   PEACE Score
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -233,32 +242,26 @@ export default function AnalyzePage() {
                   </span>
                   <span className="text-sm text-neutral-300 dark:text-neutral-600">/ 3</span>
                 </div>
-                <p className="mt-0.5 text-sm font-medium text-neutral-300 dark:text-neutral-600">
+                <p className="mt-0.5 text-base font-medium text-neutral-300 dark:text-neutral-600">
                   No data
                 </p>
               </Card>
 
               <Card>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Motion
                 </p>
                 <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
                   —
                 </p>
-                <p className="mt-0.5 text-sm text-neutral-300 dark:text-neutral-600">
-                  No data
-                </p>
               </Card>
 
-              <Card className="flex-1">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+              <Card>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
                   Region
                 </p>
-                <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
+                <p className="text-base font-medium capitalize text-neutral-300 dark:text-neutral-600">
                   —
-                </p>
-                <p className="mt-0.5 text-sm text-neutral-300 dark:text-neutral-600">
-                  No data
                 </p>
               </Card>
             </>

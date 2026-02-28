@@ -7,6 +7,11 @@ services:
       - "3000:3000"
     environment:
       - ML_BACKEND_URL=http://ml-backend:8000
+      - AUTH_TRUST_HOST=true
+      - DATABASE_URL=file:/app/data/dev.db
+      - NEXTAUTH_SECRET=peace-analyzer-dev-secret-change-in-production
+    volumes:
+      - ./.docker-data:/app/data
     depends_on:
       - ml-backend
 

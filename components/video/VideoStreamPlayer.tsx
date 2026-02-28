@@ -14,7 +14,7 @@ export interface VideoStreamPlayerHandle {
 interface VideoStreamPlayerProps {
   file: File;
   isAnalyzing: boolean;
-  onFrameCapture: (blob: Blob) => void;
+  onFrameCapture: (blob: Blob, videoTime: number) => void;
   onPlayStateChange?: (playing: boolean) => void;
   onVideoEnd?: () => void;
   onVideoReady?: (duration: number) => void;
@@ -115,7 +115,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     ctx.drawImage(video, 0, 0);
     canvas.toBlob(
       (blob) => {
-        if (blob) onFrameCapture(blob);
+        if (blob) onFrameCapture(blob, video.currentTime);
       },
       "image/jpeg",
       0.8,

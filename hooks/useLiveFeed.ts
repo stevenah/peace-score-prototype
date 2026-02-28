@@ -42,7 +42,7 @@ export function useLiveFeed({ enabled, wsUrl }: UseLiveFeedOptions) {
       try {
         const result: LiveFrameResult = JSON.parse(event.data);
         setLatestResult(result);
-        setResults((prev) => [...prev.slice(-100), result]); // Keep last 100
+        setResults((prev) => [...prev, result]);
         setFramesProcessed((c) => c + 1);
       } catch {
         // Ignore parse errors
