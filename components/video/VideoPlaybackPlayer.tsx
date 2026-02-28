@@ -364,19 +364,19 @@ export const VideoPlaybackPlayer = forwardRef<
             className="group relative flex-1 cursor-pointer py-1"
             onMouseDown={handleScrubStart}
           >
-            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-blue-500 transition-[width] duration-100 ease-linear"
+                className="h-full rounded-full bg-primary transition-[width] duration-100 ease-linear"
                 style={{ width: `${progress}%` }}
               />
             </div>
             <div
-              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-neutral-600 opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-neutral-800 dark:bg-neutral-300"
+              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
               style={{ left: `${progress}%` }}
             />
           </div>
 
-          <span className="text-xs tabular-nums text-neutral-500">
+          <span className="text-xs tabular-nums text-muted-foreground">
             {formatDuration(currentTime)} / {formatDuration(duration)}
           </span>
         </div>

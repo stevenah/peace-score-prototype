@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Upload, LogOut, LayoutDashboard } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "./ThemeToggle";
 
 function getInitials(name?: string | null, email?: string | null): string {
@@ -36,44 +34,41 @@ export function Header() {
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 shadow-[0_1px_3px_0_rgb(0_0_0/0.04)] backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="PEACE Analyzer" width={24} height={24} />
-          <span className="text-lg font-bold">PEACE Analyzer</span>
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-primary"
+            aria-hidden="true"
+          >
+            {/* Shield outline */}
+            <path
+              d="M14 2L4 6.5V13C4 19.35 8.26 25.27 14 27C19.74 25.27 24 19.35 24 13V6.5L14 2Z"
+              fill="currentColor"
+              fillOpacity="0.12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            {/* Heartbeat/waveform line */}
+            <path
+              d="M7 14.5H10.5L12 11L14 18L16 11L17.5 14.5H21"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-lg font-bold tracking-tight">PEACE</span>
         </Link>
 
         {!isAuthPage && (status === "loading" || session) && (
           <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className={cn(
-                "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                pathname === "/dashboard" || pathname.startsWith("/results")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-
-            <Link
-              href="/analyze"
-              className={cn(
-                "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                pathname.startsWith("/analyze")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <Upload className="h-4 w-4" />
-              New Analysis
-            </Link>
-
-            <Separator orientation="vertical" className="mx-2 h-6" />
-
             <ThemeToggle />
 
             {session && (

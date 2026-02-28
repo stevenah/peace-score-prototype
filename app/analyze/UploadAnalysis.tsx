@@ -57,12 +57,12 @@ export function UploadAnalysis() {
     return (
       <Card>
         <div className="flex items-center gap-3 py-8 justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
           <div>
-            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <p className="text-sm font-medium text-foreground">
               Uploading video...
             </p>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted-foreground">
               Sending video to analysis server
             </p>
           </div>
@@ -75,7 +75,7 @@ export function UploadAnalysis() {
     return (
       <div className="space-y-4">
         <AnalysisProgress status={analysis.status} progress={analysis.progress} />
-        <p className="text-center text-xs text-neutral-500">
+        <p className="text-center text-xs text-muted-foreground">
           Analysis will continue even if you leave this page
         </p>
       </div>
@@ -90,11 +90,11 @@ export function UploadAnalysis() {
       <div className="space-y-6">
         <Card className="py-8 text-center">
           <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-          <h3 className="mt-3 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <h3 className="mt-3 text-lg font-semibold text-foreground">
             Analysis Complete
           </h3>
           {analysis.video_metadata && (
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {analysis.video_metadata.analyzed_frames} frames analyzed
               {analysis.video_metadata.duration_seconds > 0 &&
                 ` \u00b7 ${Math.round(analysis.video_metadata.duration_seconds)}s duration`}

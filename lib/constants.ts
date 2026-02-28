@@ -67,6 +67,5 @@ export const ML_BACKEND_URL =
 
 export function getWsUrl(): string {
   if (typeof window === "undefined") return "";
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.host}/api/live`;
+  return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api/v1/ws/live";
 }

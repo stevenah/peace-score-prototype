@@ -12,7 +12,7 @@ export function ScoreLegend() {
             className="h-3 w-3 rounded-full"
             style={{ backgroundColor: PEACE_SCORE_COLORS[score] }}
           />
-          <span className="text-xs text-neutral-600 dark:text-neutral-400">
+          <span className="text-xs text-muted-foreground">
             {score} - {PEACE_SCORE_LABELS[score]}
           </span>
         </div>

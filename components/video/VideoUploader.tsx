@@ -72,21 +72,21 @@ export function VideoUploader({
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors",
           isDragOver
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-            : "border-neutral-300 hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-600",
+            ? "border-primary bg-primary/5 dark:bg-primary/10"
+            : "border-border hover:border-primary/40 dark:border-border dark:hover:border-primary/40",
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
         <Upload
           className={cn(
             "mb-4 h-10 w-10",
-            isDragOver ? "text-blue-500" : "text-neutral-400",
+            isDragOver ? "text-primary" : "text-muted-foreground/60",
           )}
         />
-        <p className="mb-1 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <p className="mb-1 text-sm font-medium text-foreground/80">
           {isDragOver ? "Drop video here" : "Drag & drop endoscopy video"}
         </p>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-muted-foreground">
           MP4, MOV, AVI, MKV up to 500MB
         </p>
         <input

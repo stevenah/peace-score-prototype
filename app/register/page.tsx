@@ -56,11 +56,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-8 shadow-lg shadow-black/3 ring-1 ring-black/2 dark:ring-white/2">
         <div className="text-center">
-          <Activity className="mx-auto h-10 w-10 text-blue-600" />
-          <h1 className="mt-4 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+          <Activity className="mx-auto h-10 w-10 text-primary" />
+          <h1 className="mt-4 text-2xl font-bold text-foreground">
             Create an Account
           </h1>
         </div>
@@ -75,7 +75,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              className="block text-sm font-medium text-foreground/80"
             >
               Name
             </label>
@@ -84,7 +84,7 @@ export default function RegisterPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground"
               placeholder="Dr. Smith"
             />
           </div>
@@ -92,7 +92,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              className="block text-sm font-medium text-foreground/80"
             >
               Email
             </label>
@@ -102,7 +102,7 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground"
               placeholder="you@example.com"
             />
           </div>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              className="block text-sm font-medium text-foreground/80"
             >
               Password
             </label>
@@ -121,7 +121,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground"
               placeholder="At least 6 characters"
             />
           </div>
@@ -131,11 +131,11 @@ export default function RegisterPage() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-neutral-500">
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="text-primary hover:text-primary/80"
           >
             Sign in
           </Link>

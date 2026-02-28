@@ -105,8 +105,8 @@ export function LiveFeedViewer({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 p-12 dark:border-neutral-700">
-        <CameraOff className="mb-4 h-10 w-10 text-neutral-400" />
+      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-12">
+        <CameraOff className="mb-4 h-10 w-10 text-muted-foreground/60" />
         <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>
         <Button variant="secondary" size="sm" onClick={() => startStream()}>
           Retry
@@ -127,7 +127,7 @@ export function LiveFeedViewer({
       />
       <canvas ref={canvasRef} className="hidden" />
       {!hasPermission && isActive && (
-        <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <div className="flex flex-col items-center">
             <Camera className="mb-2 h-8 w-8 animate-pulse text-white" />
             <p className="text-sm text-white">Requesting camera access...</p>

@@ -87,7 +87,7 @@ export default function ResultsPage({
     return (
       <div className="py-12 text-center">
         <p className="text-red-600">{error}</p>
-        <Link href="/analyze" className="mt-4 text-sm text-blue-600">
+        <Link href="/analyze" className="mt-4 text-sm text-primary">
           Back to analysis
         </Link>
       </div>
@@ -104,10 +104,10 @@ export default function ResultsPage({
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+          <h1 className="text-2xl font-bold text-foreground">
             Analysis Results
           </h1>
-          <p className="text-xs text-neutral-500">ID: {id}</p>
+          <p className="text-xs text-muted-foreground">ID: {id}</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export default function ResultsPage({
 
                 {activeEntry?.motion && (
                   <Card>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Motion
                     </p>
                     <MotionIndicator
@@ -159,10 +159,10 @@ export default function ResultsPage({
 
                 {activeEntry?.region && (
                   <Card>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Region
                     </p>
-                    <p className="text-base font-medium capitalize text-neutral-900 dark:text-neutral-100">
+                    <p className="text-base font-medium capitalize text-foreground">
                       {activeEntry.region}
                     </p>
                   </Card>
@@ -176,7 +176,7 @@ export default function ResultsPage({
                   </CardHeader>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-neutral-500">Duration</p>
+                      <p className="text-xs text-muted-foreground">Duration</p>
                       <p className="text-lg font-semibold">
                         {analysis.video_metadata &&
                         analysis.video_metadata.duration_seconds > 0
@@ -187,7 +187,7 @@ export default function ResultsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-muted-foreground">
                         Frames Analyzed
                       </p>
                       <p className="text-lg font-semibold">
@@ -195,7 +195,7 @@ export default function ResultsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">Segments</p>
+                      <p className="text-xs text-muted-foreground">Segments</p>
                       <p className="text-lg font-semibold">
                         {results.motion_analysis.segments.length || "—"}
                       </p>
@@ -219,7 +219,7 @@ export default function ResultsPage({
                   </CardHeader>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <div>
-                      <p className="text-xs text-neutral-500">Duration</p>
+                      <p className="text-xs text-muted-foreground">Duration</p>
                       <p className="text-lg font-semibold">
                         {analysis.video_metadata &&
                         analysis.video_metadata.duration_seconds > 0
@@ -230,7 +230,7 @@ export default function ResultsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">Resolution</p>
+                      <p className="text-xs text-muted-foreground">Resolution</p>
                       <p className="text-lg font-semibold">
                         {analysis.video_metadata &&
                         analysis.video_metadata.resolution[0] > 0
@@ -239,7 +239,7 @@ export default function ResultsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-muted-foreground">
                         Frames Analyzed
                       </p>
                       <p className="text-lg font-semibold">
@@ -247,7 +247,7 @@ export default function ResultsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">Segments</p>
+                      <p className="text-xs text-muted-foreground">Segments</p>
                       <p className="text-lg font-semibold">
                         {results.motion_analysis.segments.length || "—"}
                       </p>
@@ -283,7 +283,7 @@ export default function ResultsPage({
                   <button
                     type="button"
                     onClick={() => setIsPlaying((p) => !p)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground/70 transition-colors hover:bg-accent"
                   >
                     {isPlaying ? (
                       <Pause className="h-4 w-4" />
@@ -294,11 +294,11 @@ export default function ResultsPage({
                   <button
                     type="button"
                     onClick={handleRestart}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground/70 transition-colors hover:bg-accent"
                   >
                     <RotateCcw className="h-4 w-4" />
                   </button>
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-muted-foreground">
                     {formatDuration(replayTime)} /{" "}
                     {formatDuration(totalDuration)}
                   </span>
@@ -327,12 +327,12 @@ export default function ResultsPage({
                 {results.motion_analysis.segments.map((seg, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between rounded-lg bg-neutral-50 px-4 py-2 dark:bg-neutral-800"
+                    className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2"
                   >
                     <MotionIndicator
                       direction={seg.direction as MotionDirection}
                     />
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-xs text-muted-foreground">
                       {formatDuration(seg.start_time)} →{" "}
                       {formatDuration(seg.end_time)}
                     </span>

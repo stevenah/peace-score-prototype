@@ -12,7 +12,7 @@ export function Progress({ value, className, color }: ProgressProps) {
   return (
     <div
       className={cn(
-        "h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700",
+        "h-2 w-full overflow-hidden rounded-full bg-muted",
         className,
       )}
     >
@@ -20,7 +20,7 @@ export function Progress({ value, className, color }: ProgressProps) {
         className="h-full rounded-full transition-all duration-500 ease-out"
         style={{
           width: `${clampedValue}%`,
-          backgroundColor: color || "#3b82f6",
+          backgroundColor: color || "var(--clinical-blue, #3b82f6)",
         }}
       />
     </div>

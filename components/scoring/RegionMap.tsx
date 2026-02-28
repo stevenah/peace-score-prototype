@@ -72,12 +72,12 @@ export function RegionMap({ byRegion }: RegionMapProps) {
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-sm text-neutral-700 dark:text-neutral-300">
+              <span className="text-sm text-foreground/80">
                 {REGION_LABELS[region]}:{" "}
                 <span className="font-medium" style={{ color }}>
                   {data.score}/3
                 </span>{" "}
-                <span className="text-neutral-400">
+                <span className="text-muted-foreground">
                   {PEACE_SCORE_LABELS[data.score as PeaceScore]}
                 </span>
               </span>

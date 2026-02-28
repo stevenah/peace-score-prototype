@@ -18,8 +18,10 @@ export function PeaceScoreCard({
   const scoreLabel = label || PEACE_SCORE_LABELS[score];
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+    <div
+      className="rounded-xl border border-border bg-card p-6 shadow-sm ring-1 ring-black/3 dark:ring-white/3"
+    >
+      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {region || "PEACE Score"}
       </p>
       <div className="flex items-baseline gap-2">
@@ -29,7 +31,7 @@ export function PeaceScoreCard({
         >
           {score}
         </span>
-        <span className="text-sm text-neutral-400">/ 3</span>
+        <span className="text-sm text-muted-foreground/60">/ 3</span>
       </div>
       <p
         className={`mt-0.5 font-medium ${size === "lg" ? "text-base" : "text-sm"}`}

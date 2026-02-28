@@ -38,10 +38,10 @@ export default function LivePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+          <h1 className="text-2xl font-bold text-foreground">
             Live Feed
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Real-time PEACE score analysis from camera
           </p>
         </div>
@@ -80,8 +80,8 @@ export default function LivePage() {
               />
 
               {latestResult.motion && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Motion
                   </p>
                   <MotionIndicator
@@ -91,19 +91,19 @@ export default function LivePage() {
               )}
 
               {latestResult.region && (
-                <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Region
                   </p>
-                  <p className="text-base font-medium capitalize text-neutral-900 dark:text-neutral-100">
+                  <p className="text-base font-medium capitalize text-foreground">
                     {latestResult.region}
                   </p>
                 </div>
               )}
             </>
           ) : (
-            <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-900">
-              <p className="text-sm text-neutral-400">
+            <div className="rounded-xl border border-border bg-card p-8 text-center">
+              <p className="text-sm text-muted-foreground/60">
                 {isActive ? "Waiting for first frame..." : "Start the feed to begin"}
               </p>
             </div>

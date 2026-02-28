@@ -43,12 +43,12 @@ export function PeaceScoreTimeline({ timeline, totalDuration, currentTime, onSee
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <h3 className="text-sm font-medium text-foreground/80">
           Score Timeline
         </h3>
         <ScoreLegend />
       </div>
-      <div className={`h-48 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 ${onSeek ? "cursor-pointer" : ""}`}>
+      <div className={`h-48 rounded-xl border border-border bg-card p-4 ring-1 ring-black/3 dark:ring-white/3 ${onSeek ? "cursor-pointer" : ""}`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={data}
@@ -77,7 +77,7 @@ export function PeaceScoreTimeline({ timeline, totalDuration, currentTime, onSee
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+                  <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
                     <p className="font-medium" style={{ color: d.scoreColor }}>
                       Score: {d.peace_score}
                     </p>

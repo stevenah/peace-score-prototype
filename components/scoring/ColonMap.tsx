@@ -75,15 +75,15 @@ export function ColonMap({
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-4">
-      <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400 mb-2">Colon Map</h3>
+    <div className="flex flex-1 flex-col bg-card rounded-xl border border-border p-4">
+      <h3 className="text-sm font-medium text-muted-foreground mb-2">Colon Map</h3>
 
       <svg viewBox="0 0 460 460" className="w-full h-auto">
         {/* Background */}
         <rect width="460" height="460" fill="none" rx="8" />
 
         {/* Title */}
-        <text x="230" y="30" textAnchor="middle" className="text-sm font-medium fill-neutral-700 dark:fill-neutral-300">
+        <text x="230" y="30" textAnchor="middle" className="text-sm font-medium fill-foreground/80">
           Colonoscopy Progress
         </text>
 
@@ -113,8 +113,8 @@ export function ColonMap({
               textAnchor="middle"
               className={`text-xs ${
                 segmentsVisited.includes(segment as ColonSegment)
-                  ? 'fill-neutral-700 dark:fill-neutral-300'
-                  : 'fill-neutral-400 dark:fill-neutral-500'
+                  ? 'fill-foreground/80'
+                  : 'fill-muted-foreground/60'
               }`}
             >
               {SEGMENT_LABELS[segment as ColonSegment]}
@@ -136,23 +136,23 @@ export function ColonMap({
         {/* Legend */}
         <g transform="translate(20, 430)">
           <rect x="0" y="0" width="12" height="12" fill="#22c55e" rx="2" />
-          <text x="18" y="10" className="text-xs fill-neutral-600 dark:fill-neutral-400">Visited (Good)</text>
+          <text x="18" y="10" className="text-xs fill-muted-foreground">Visited (Good)</text>
 
           <rect x="120" y="0" width="12" height="12" fill="#3b82f6" rx="2" />
-          <text x="138" y="10" className="text-xs fill-neutral-600 dark:fill-neutral-400">Current</text>
+          <text x="138" y="10" className="text-xs fill-muted-foreground">Current</text>
 
           <rect x="210" y="0" width="12" height="12" fill="#e5e7eb" rx="2" />
-          <text x="228" y="10" className="text-xs fill-neutral-600 dark:fill-neutral-400">Not Visited</text>
+          <text x="228" y="10" className="text-xs fill-muted-foreground">Not Visited</text>
         </g>
       </svg>
 
       {/* Progress stats */}
       <div className="mt-3 flex justify-between text-sm">
-        <span className="text-neutral-500 dark:text-neutral-400">
+        <span className="text-muted-foreground">
           Segments: {segmentsVisited.length}/8
         </span>
         <span className={`font-medium ${
-          segmentsVisited.includes('cecum') ? 'text-green-600' : 'text-neutral-500 dark:text-neutral-400'
+          segmentsVisited.includes('cecum') ? 'text-green-600' : 'text-muted-foreground'
         }`}>
           {segmentsVisited.includes('cecum') ? '✓ Cecum Reached' : 'Cecum Not Reached'}
         </span>

@@ -27,16 +27,16 @@ export function AnalysisProgress({
     <Card>
       <div className="flex items-center gap-3">
         {isActive && (
-          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
         )}
         <div className="flex-1">
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+          <p className="text-sm font-medium text-foreground">
             {statusMessages[status]}
           </p>
           {isActive && (
             <div className="mt-2">
               <Progress value={progress * 100} />
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {Math.round(progress * 100)}% complete
               </p>
             </div>

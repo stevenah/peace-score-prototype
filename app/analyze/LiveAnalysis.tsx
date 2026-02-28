@@ -202,7 +202,7 @@ export function LiveAnalysis() {
 
               {displayResult.motion && (
                 <Card>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Motion
                   </p>
                   <MotionIndicator
@@ -213,10 +213,10 @@ export function LiveAnalysis() {
 
               {displayResult.region && (
                 <Card>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Region
                   </p>
-                  <p className="text-base font-medium capitalize text-neutral-900 dark:text-neutral-100">
+                  <p className="text-base font-medium capitalize text-foreground">
                     {displayResult.region}
                   </p>
                 </Card>
@@ -225,34 +225,34 @@ export function LiveAnalysis() {
           ) : (
             <>
               <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   PEACE Score
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-neutral-300 dark:text-neutral-600">
+                  <span className="text-4xl font-bold text-muted-foreground/30">
                     —
                   </span>
-                  <span className="text-sm text-neutral-300 dark:text-neutral-600">/ 3</span>
+                  <span className="text-sm text-muted-foreground/30">/ 3</span>
                 </div>
-                <p className="mt-0.5 text-base font-medium text-neutral-300 dark:text-neutral-600">
+                <p className="mt-0.5 text-base font-medium text-muted-foreground/30">
                   No data
                 </p>
               </Card>
 
               <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Motion
                 </p>
-                <p className="text-base font-medium text-neutral-300 dark:text-neutral-600">
+                <p className="text-base font-medium text-muted-foreground/30">
                   —
                 </p>
               </Card>
 
               <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Region
                 </p>
-                <p className="text-base font-medium capitalize text-neutral-300 dark:text-neutral-600">
+                <p className="text-base font-medium capitalize text-muted-foreground/30">
                   —
                 </p>
               </Card>
@@ -272,12 +272,12 @@ export function LiveAnalysis() {
       ) : (
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <h3 className="text-sm font-medium text-foreground/80">
               Score Timeline
             </h3>
           </div>
           <Card className="flex h-48 items-center justify-center">
-            <p className="text-sm text-neutral-400">
+            <p className="text-sm text-muted-foreground/60">
               Timeline will appear as frames are analyzed
             </p>
           </Card>

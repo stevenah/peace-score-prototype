@@ -19,22 +19,22 @@ const EMPTY_STATES: Record<
   { icon: React.ReactNode; title: string; description: string }
 > = {
   all: {
-    icon: <Upload className="h-12 w-12 text-neutral-300" />,
+    icon: <Upload className="h-12 w-12 text-muted-foreground/40" />,
     title: "No analyses yet",
     description: "Upload an endoscopy video to get started with PEACE scoring.",
   },
   processing: {
-    icon: <Clock className="h-12 w-12 text-neutral-300" />,
+    icon: <Clock className="h-12 w-12 text-muted-foreground/40" />,
     title: "No active analyses",
     description: "All your analyses have completed processing.",
   },
   completed: {
-    icon: <CheckCircle2 className="h-12 w-12 text-neutral-300" />,
+    icon: <CheckCircle2 className="h-12 w-12 text-muted-foreground/40" />,
     title: "No completed analyses",
     description: "Your analyses are still being processed.",
   },
   failed: {
-    icon: <AlertTriangle className="h-12 w-12 text-neutral-300" />,
+    icon: <AlertTriangle className="h-12 w-12 text-muted-foreground/40" />,
     title: "No failed analyses",
     description: "All your analyses completed successfully.",
   },
@@ -129,10 +129,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+          <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {session?.user?.name || session?.user?.email}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {analyses.length} total{" "}
             {analyses.length === 1 ? "analysis" : "analyses"}
           </p>
@@ -157,10 +157,10 @@ export default function DashboardPage() {
         <Card className="py-12 text-center">
           <div className="flex flex-col items-center gap-3">
             {EMPTY_STATES[filter].icon}
-            <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-300">
+            <h3 className="text-lg font-medium text-foreground/70">
               {EMPTY_STATES[filter].title}
             </h3>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-muted-foreground">
               {EMPTY_STATES[filter].description}
             </p>
             {filter === "all" && (

@@ -98,10 +98,10 @@ export function AnalysisCard({
         {/* Header: filename + status */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <p className="truncate text-sm font-medium text-foreground">
               {analysis.filename}
             </p>
-            <p className="text-xs text-neutral-500">{dateStr}</p>
+            <p className="text-xs text-muted-foreground">{dateStr}</p>
           </div>
           <StatusBadge status={analysis.status} />
         </div>
@@ -111,14 +111,14 @@ export function AnalysisCard({
           {analysis.status === "processing" && (
             <div>
               <Progress value={50} color="#3b82f6" />
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Analyzing frames...
               </p>
             </div>
           )}
 
           {analysis.status === "queued" && (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted-foreground">
               Waiting for available worker...
             </p>
           )}
@@ -132,7 +132,7 @@ export function AnalysisCard({
                 >
                   {score}
                 </span>
-                <span className="text-sm text-neutral-400"> / 3</span>
+                <span className="text-sm text-muted-foreground"> / 3</span>
                 <p
                   className="text-xs font-medium"
                   style={{ color: PEACE_SCORE_COLORS[score] }}
@@ -140,7 +140,7 @@ export function AnalysisCard({
                   {PEACE_SCORE_LABELS[score]}
                 </p>
               </div>
-              <div className="flex-1 space-y-1 text-xs text-neutral-500">
+              <div className="flex-1 space-y-1 text-xs text-muted-foreground">
                 {analysis.framesAnalyzed != null && (
                   <p>{analysis.framesAnalyzed} frames</p>
                 )}
@@ -160,7 +160,7 @@ export function AnalysisCard({
       </div>
 
       {/* Footer: actions */}
-      <div className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 dark:border-neutral-800">
+      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         {isComplete ? (
           <Link href={`/results/${analysis.analysisId}`}>
             <Button variant="ghost" size="sm">
@@ -182,7 +182,7 @@ export function AnalysisCard({
           <AlertDialogTrigger asChild>
             <button
               type="button"
-              className="rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
