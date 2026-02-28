@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { uploadVideo } from "@/lib/api-client";
 
 export function useVideoUpload() {
@@ -24,5 +24,11 @@ export function useVideoUpload() {
     }
   }
 
-  return { upload, isUploading, analysisId, error };
+  const reset = useCallback(() => {
+    setIsUploading(false);
+    setAnalysisId(null);
+    setError(null);
+  }, []);
+
+  return { upload, isUploading, analysisId, error, reset };
 }

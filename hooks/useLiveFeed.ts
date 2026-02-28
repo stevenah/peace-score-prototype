@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LiveFrameResult } from "@/lib/types";
+import { getWsUrl } from "@/lib/constants";
 
 interface UseLiveFeedOptions {
   enabled: boolean;
@@ -25,11 +26,7 @@ export function useLiveFeed({ enabled, wsUrl }: UseLiveFeedOptions) {
       return;
     }
 
-    const protocol = typeof window !== "undefined"
-      ? (window.location.protocol === "https:" ? "wss:" : "ws:")
-      : "ws:";
-    const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
-    const url = wsUrl || `${protocol}//${host}/api/live`;
+    const url = wsUrl || getWsUrl();
 
     const ws = new WebSocket(url);
     wsRef.current = ws;

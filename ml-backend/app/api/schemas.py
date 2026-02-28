@@ -141,6 +141,7 @@ class HealthResponse(BaseModel):
     gpu_available: bool
     version: str
     use_mock: bool
+    worker_alive: bool = True
 
 
 class LiveFrameResult(BaseModel):

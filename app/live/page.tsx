@@ -14,7 +14,6 @@ export default function LivePage() {
   const [isActive, setIsActive] = useState(false);
   const { latestResult, results, sendFrame, reset } = useLiveFeed({
     enabled: isActive,
-    wsUrl: "ws://localhost:8000/api/v1/ws/live",
   });
 
   function handleToggle() {

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      target: dev
     ports:
       - "3000:3000"
     environment:
@@ -11,6 +12,12 @@ services:
       - DATABASE_URL=file:/app/data/dev.db
       - NEXTAUTH_SECRET=peace-analyzer-dev-secret-change-in-production
     volumes:
+      - ./app:/app/app
+      - ./components:/app/components
+      - ./hooks:/app/hooks
+      - ./lib:/app/lib
+      - ./public:/app/public
+      - ./prisma:/app/prisma
       - ./.docker-data:/app/data
     depends_on:
       - ml-backend
@@ -19,11 +26,16 @@ services:
     build:
       context: ./ml-backend
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "8000:8000"
     environment:
       - PEACE_USE_MOCK_MODELS=true
       - PEACE_DEBUG=true
       - PEACE_CORS_ORIGINS=["http://localhost:3000"]
+      - PEACE_JOB_DB_PATH=/app/data/jobs.db
+      - PEACE_UPLOAD_DIR=/app/data/uploads
     volumes:
+      - ./ml-backend/app:/app/app
       - ./ml-backend/app/models:/app/models
+      - ./.docker-data/ml:/app/data

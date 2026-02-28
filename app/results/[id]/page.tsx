@@ -15,6 +15,7 @@ import {
 } from "@/components/video/VideoPlaybackPlayer";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { formatDuration } from "@/lib/utils";
+import { PEACE_SCORE_COLORS } from "@/lib/constants";
 import type { PeaceScore, MotionDirection, TimelineEntry } from "@/lib/types";
 
 export default function ResultsPage({
@@ -305,14 +306,7 @@ export default function ResultsPage({
                     <span
                       className="ml-auto text-sm font-bold"
                       style={{
-                        color: (
-                          {
-                            0: "#ef4444",
-                            1: "#f97316",
-                            2: "#84cc16",
-                            3: "#22c55e",
-                          } as Record<number, string>
-                        )[activeEntry.peace_score],
+                        color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore],
                       }}
                     >
                       Score: {activeEntry.peace_score}/3 &middot;{" "}

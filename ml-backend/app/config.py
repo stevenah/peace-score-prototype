@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     model_path: str = ""
     device: str = "auto"
+    job_db_path: str = "/tmp/peace-jobs/jobs.db"
+    worker_poll_interval: float = 1.0
 
     model_config = {"env_prefix": "PEACE_"}
 

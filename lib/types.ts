@@ -131,6 +131,20 @@ export const SEGMENT_LABELS: Record<ColonSegment, string> = {
   cecum: "Cecum",
 };
 
+// === Dashboard Records ===
+
+export interface AnalysisRecord {
+  id: string;
+  analysisId: string;
+  filename: string;
+  status: string;
+  overallScore: number | null;
+  framesAnalyzed: number | null;
+  duration: number | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 // === Config ===
 
 export interface AnalysisConfig {

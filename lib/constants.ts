@@ -64,3 +64,9 @@ export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export const ML_BACKEND_URL =
   process.env.ML_BACKEND_URL || "http://localhost:8000";
+
+export function getWsUrl(): string {
+  if (typeof window === "undefined") return "";
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.host}/api/live`;
+}

@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine AS base
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
@@ -10,12 +10,20 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate
-RUN npm run build
 
+# --- Dev stage: next dev with hot reload ---
+FROM base AS dev
 RUN mkdir -p /app/data
-
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+CMD ["sh", "-c", "npx prisma db push && npx next dev --hostname 0.0.0.0"]
 
+# --- Prod stage: build and serve ---
+FROM base AS prod
+RUN npm run build
+RUN mkdir -p /app/data
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 CMD ["sh", "docker-entrypoint.sh"]

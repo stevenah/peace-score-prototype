@@ -4,24 +4,24 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 from io import BytesIO
 from typing import Optional
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from PIL import Image
 
 from app.api.schemas import (
     AnalysisResponse,
-    AnalysisStatus,
     FrameAnalysisResponse,
     HealthResponse,
 )
 from app.config import settings
-from app.ml.frame_sampler import extract_frames
 from app.ml.pipeline import create_pipeline
-from app.services.task_service import task_store
+from app.services.instances import worker
+from app.services.job_store import job_store
 
 router = APIRouter(prefix="/api/v1")
 
@@ -29,11 +29,12 @@ router = APIRouter(prefix="/api/v1")
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(
-        status="healthy",
+        status="healthy" if worker.is_alive else "degraded",
         models_loaded=True,
         gpu_available=False,
         version=settings.version,
         use_mock=settings.use_mock_models,
+        worker_alive=worker.is_alive,
     )
 
 
@@ -79,11 +80,10 @@ async def analyze_frame(
 
 @router.post("/analyze/video")
 async def analyze_video(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     config: Optional[str] = Form(None),
 ):
-    """Upload a video for async analysis."""
+    """Upload a video for async analysis. The worker thread picks up the job."""
     # Validate file type (check both content_type and extension)
     allowed_types = {
         "video/mp4",
@@ -102,68 +102,31 @@ async def analyze_video(
             detail=f"Unsupported file type: {file.content_type}. Allowed: mp4, avi, mov, mkv",
         )
 
-    # Save uploaded file
+    # Save uploaded file, then create the job
     os.makedirs(settings.upload_dir, exist_ok=True)
-    task_id = task_store.create_task()
-    file_path = os.path.join(settings.upload_dir, f"{task_id}.mp4")
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
 
     content = await file.read()
     with open(file_path, "wb") as f:
         f.write(content)
 
-    # Start background analysis
-    background_tasks.add_task(_run_analysis, task_id, file_path)
+    job_id = job_store.create_job(file_path)
 
-    task = task_store.get_task(task_id)
+    job = job_store.get_job(job_id)
     return {
-        "analysis_id": task_id,
+        "analysis_id": job_id,
         "status": "queued",
         "estimated_duration_seconds": 30,
-        "created_at": task["created_at"] if task else "",
+        "created_at": job["created_at"] if job else "",
     }
 
 
 @router.get("/analyze/{analysis_id}", response_model=AnalysisResponse)
 async def get_analysis(analysis_id: str):
     """Poll for analysis status and results."""
-    task = task_store.get_task(analysis_id)
-    if not task:
+    job = job_store.get_job(analysis_id)
+    if not job:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    return AnalysisResponse(**task)
-
-
-def _run_analysis(task_id: str, file_path: str) -> None:
-    """Background task to run the full video analysis pipeline."""
-    try:
-        task_store.update_task(
-            task_id, status=AnalysisStatus.PROCESSING, progress=0.1
-        )
-
-        # Extract frames
-        frames, metadata = extract_frames(
-            file_path, sample_rate_fps=settings.sample_rate_fps
-        )
-        task_store.update_task(task_id, progress=0.3)
-
-        # Run pipeline
-        pipeline = create_pipeline()
-        frame_tuples = [(f.index, f.timestamp, f.data) for f in frames]
-        results = pipeline.analyze_frames(frame_tuples, metadata["duration_seconds"])
-        task_store.update_task(task_id, progress=0.8)
-
-        # Aggregate
-        aggregated = pipeline.aggregate_results(results, metadata["duration_seconds"])
-        task_store.update_task(task_id, progress=0.95)
-
-        # Complete
-        task_store.complete_task(task_id, results=aggregated, metadata=metadata)
-
-    except Exception as e:
-        task_store.fail_task(task_id, str(e))
-    finally:
-        # Clean up uploaded file
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
+    return AnalysisResponse(**job)
