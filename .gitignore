@@ -47,7 +47,7 @@ next-env.d.ts
 ml-backend/.venv/
 ml-backend/__pycache__/
 ml-backend/**/__pycache__/
-ml-backend/app/models/*.pt
+ml-backend/experiments/
 ml-backend/app/models/*.pth
 ml-backend/app/models/*.onnx
 *.pyc
@@ -61,3 +61,6 @@ prisma/dev.db-journal
 /tmp/peace-uploads/
 /uploads/
 *.db
+dataset/
+*.pt
+*.egg*

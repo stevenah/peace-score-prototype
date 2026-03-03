@@ -1,0 +1,30 @@
+app = 'peace-ml'
+primary_region = 'ams'
+
+[build]
+  dockerfile = 'Dockerfile'
+  target = 'prod'
+
+[env]
+  PEACE_USE_MOCK_MODELS = 'false'
+  PEACE_MODEL_PATH = '/app/app/models/best_model.pt'
+  PEACE_DEBUG = 'false'
+  PEACE_DEVICE = 'cpu'
+  PEACE_UPLOAD_DIR = '/data/uploads'
+  PEACE_JOB_DB_PATH = '/data/jobs.db'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 2
+
+[mounts]
+  source = 'peace_ml_data'
+  destination = '/data'

@@ -3,24 +3,20 @@
 Expects directory structure:
     dataset_path/
         esophagus_0/
-            video_001/
-                frame_0000.jpg
-                frame_0001.jpg
-                ...
-            video_002/
-                ...
+            esophagus_0_0010_frame0.jpg
+            esophagus_0_0010_frame5.jpg
+            ...
         esophagus_1/
         ...
         stomach_3/
 
 Each class folder name is parsed as {region}_{score}.
-Motion pseudo-labels are computed from consecutive frame differencing.
 """
 
 from __future__ import annotations
 
-import os
 import random
+import re
 from pathlib import Path
 
 import cv2
@@ -31,11 +27,6 @@ from torchvision import transforms
 
 REGIONS = ["esophagus", "stomach", "duodenum"]
 REGION_TO_IDX = {r: i for i, r in enumerate(REGIONS)}
-
-MOTIONS = ["stationary", "insertion", "retraction"]
-MOTION_STATIONARY = 0
-MOTION_INSERTION = 1
-MOTION_RETRACTION = 2
 
 
 def parse_class_name(class_name: str) -> tuple[int, int]:
@@ -49,54 +40,30 @@ def parse_class_name(class_name: str) -> tuple[int, int]:
     return REGION_TO_IDX[region_str], int(score_str)
 
 
-def compute_motion_label(
-    current_frame: np.ndarray,
-    prev_frame: np.ndarray | None,
-    stationary_threshold: float = 10.0,
-    motion_threshold: float = 30.0,
-) -> int:
-    """Compute motion pseudo-label from frame differencing.
+def _extract_video_id(path: str) -> str:
+    """Extract video ID from frame filename.
 
-    Returns:
-        0 = stationary, 1 = insertion, 2 = retraction
+    Expected format: {region}_{score}_{videoID}_frame{N}.jpg
+    Returns the videoID portion.
     """
-    if prev_frame is None:
-        return MOTION_STATIONARY
+    fname = path.rsplit("/", 1)[-1]
+    m = re.match(r"[a-z]+_\d+_(.+)_frame\d+\.jpg", fname)
+    return m.group(1) if m else fname
 
-    # Convert to grayscale for differencing
-    if current_frame.ndim == 3:
-        curr_gray = cv2.cvtColor(current_frame, cv2.COLOR_RGB2GRAY).astype(float)
-        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_RGB2GRAY).astype(float)
-    else:
-        curr_gray = current_frame.astype(float)
-        prev_gray = prev_frame.astype(float)
 
-    diff = np.mean(np.abs(curr_gray - prev_gray))
-
-    if diff < stationary_threshold:
-        return MOTION_STATIONARY
-
-    # Use vertical flow direction as proxy for insertion/retraction:
-    # positive mean diff in bottom half suggests insertion (moving forward)
-    h = curr_gray.shape[0]
-    top_diff = np.mean(np.abs(curr_gray[: h // 2] - prev_gray[: h // 2]))
-    bottom_diff = np.mean(np.abs(curr_gray[h // 2 :] - prev_gray[h // 2 :]))
-
-    if bottom_diff > top_diff:
-        return MOTION_INSERTION
-    else:
-        return MOTION_RETRACTION
+def _extract_frame_number(filename: str) -> int:
+    """Extract numeric frame number from filename for proper sorting."""
+    m = re.search(r"frame(\d+)", filename)
+    return int(m.group(1)) if m else 0
 
 
 class PEACEFrameDataset(Dataset):
-    """Frame-level dataset for multitask PEACE model training.
+    """Frame-level dataset for PEACE model training.
 
     Each sample returns:
-        image: (3, 224, 224) tensor
-        prev_image: (3, 224, 224) tensor (previous frame or zeros)
-        region_label: int (0-2)
-        score_label: int (0-3)
-        motion_label: int (0-2)
+        image: (3, H, W) tensor
+        region: int (0-2)
+        score: int (0-3)
     """
 
     def __init__(
@@ -120,10 +87,17 @@ class PEACEFrameDataset(Dataset):
         if augment:
             if aug_cfg.get("horizontal_flip", True):
                 transform_list.append(transforms.RandomHorizontalFlip())
-            rotation = aug_cfg.get("random_rotation", 10)
+            if aug_cfg.get("vertical_flip", False):
+                transform_list.append(transforms.RandomVerticalFlip())
+            rotation = aug_cfg.get("random_rotation", 30)
             if rotation > 0:
                 transform_list.append(transforms.RandomRotation(rotation))
-            jitter = aug_cfg.get("color_jitter", 0.1)
+            if aug_cfg.get("random_affine", False):
+                transform_list.append(transforms.RandomAffine(
+                    degrees=0, translate=(0.1, 0.1),
+                    scale=(0.85, 1.15), shear=10,
+                ))
+            jitter = aug_cfg.get("color_jitter", 0.3)
             if jitter > 0:
                 transform_list.append(
                     transforms.ColorJitter(
@@ -133,6 +107,11 @@ class PEACEFrameDataset(Dataset):
                         hue=jitter / 2,
                     )
                 )
+            if aug_cfg.get("gaussian_blur", False):
+                transform_list.append(
+                    transforms.GaussianBlur(kernel_size=7, sigma=(0.1, 2.0))
+                )
+
         transform_list.extend([
             transforms.ToTensor(),
             transforms.Normalize(
@@ -140,7 +119,39 @@ class PEACEFrameDataset(Dataset):
                 std=[0.229, 0.224, 0.225],
             ),
         ])
+
+        # RandomErasing must be after ToTensor
+        if augment and aug_cfg.get("random_erasing", False):
+            transform_list.append(
+                transforms.RandomErasing(p=0.3, scale=(0.02, 0.15), ratio=(0.3, 3.3))
+            )
+
         self.transform = transforms.Compose(transform_list)
+
+        # TTA transforms (no random augmentation, deterministic flips)
+        self.tta_transforms = [
+            self.transform,  # original
+            transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.Resize((image_size, image_size)),
+                transforms.RandomHorizontalFlip(p=1.0),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]),
+            transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.Resize((image_size, image_size)),
+                transforms.RandomVerticalFlip(p=1.0),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]),
+        ]
 
         # Scan dataset directory
         self._scan_dataset(dataset_path)
@@ -164,17 +175,14 @@ class PEACEFrameDataset(Dataset):
             except ValueError:
                 continue
 
-            # Each class dir may contain video subdirs or direct frames
             frame_paths = self._collect_frames(class_dir)
-
-            # Group frames by video/sequence for motion label computation
             for group_key, group_frames in frame_paths.items():
-                sorted_frames = sorted(group_frames)
-                for i, frame_path in enumerate(sorted_frames):
-                    prev_path = sorted_frames[i - 1] if i > 0 else None
+                sorted_frames = sorted(
+                    group_frames, key=lambda p: _extract_frame_number(p.name)
+                )
+                for frame_path in sorted_frames:
                     self.samples.append({
                         "path": str(frame_path),
-                        "prev_path": str(prev_path) if prev_path else None,
                         "region": region_idx,
                         "score": score_idx,
                     })
@@ -186,7 +194,6 @@ class PEACEFrameDataset(Dataset):
         groups: dict[str, list[Path]] = {}
         image_exts = {".jpg", ".jpeg", ".png", ".bmp"}
 
-        # Check for video subdirectories
         subdirs = [d for d in class_dir.iterdir() if d.is_dir()]
         if subdirs:
             for subdir in subdirs:
@@ -197,13 +204,14 @@ class PEACEFrameDataset(Dataset):
                 if frames:
                     groups[subdir.name] = frames
         else:
-            # Frames directly in class dir
+            # Group by video ID from filename
             frames = [
                 f for f in class_dir.iterdir()
                 if f.suffix.lower() in image_exts
             ]
-            if frames:
-                groups["default"] = frames
+            for frame in frames:
+                vid_id = _extract_video_id(str(frame))
+                groups.setdefault(vid_id, []).append(frame)
 
         return groups
 
@@ -220,26 +228,53 @@ class PEACEFrameDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         sample = self.samples[idx]
-
         frame = self._load_frame(sample["path"])
         image = self.transform(frame)
-
-        # Load previous frame for motion label
-        if sample["prev_path"]:
-            prev_frame = self._load_frame(sample["prev_path"])
-            prev_image = self.transform(prev_frame)
-            motion_label = compute_motion_label(frame, prev_frame)
-        else:
-            prev_image = torch.zeros_like(image)
-            motion_label = MOTION_STATIONARY
-
         return {
             "image": image,
-            "prev_image": prev_image,
             "region": sample["region"],
             "score": sample["score"],
-            "motion": motion_label,
         }
+
+    def get_tta_images(self, idx: int) -> list[torch.Tensor]:
+        """Return list of TTA-augmented versions of a frame."""
+        sample = self.samples[idx]
+        frame = self._load_frame(sample["path"])
+        return [t(frame) for t in self.tta_transforms]
+
+
+class VideoSubsampledDataset(Dataset):
+    """Wrapper that randomly subsamples K frames per video each epoch.
+
+    Call resample() at the start of each epoch to get a new random subset.
+    """
+
+    def __init__(
+        self,
+        base_dataset: PEACEFrameDataset,
+        vid_to_sample_indices: dict[str, list[int]],
+        max_frames_per_video: int = 8,
+    ):
+        self.base = base_dataset
+        self.vid_to_sample_indices = vid_to_sample_indices
+        self.max_k = max_frames_per_video
+        self.active_indices: list[int] = []
+        self.resample()
+
+    def resample(self) -> None:
+        """Resample K frames per video. Call at the start of each epoch."""
+        self.active_indices = []
+        for indices in self.vid_to_sample_indices.values():
+            if len(indices) <= self.max_k:
+                self.active_indices.extend(indices)
+            else:
+                self.active_indices.extend(random.sample(indices, self.max_k))
+
+    def __len__(self) -> int:
+        return len(self.active_indices)
+
+    def __getitem__(self, idx: int) -> dict:
+        return self.base[self.active_indices[idx]]
 
 
 def create_splits(
@@ -248,34 +283,35 @@ def create_splits(
     val_size: float = 0.2,
     seed: int = 42,
     augmentation_config: dict | None = None,
-) -> tuple[PEACEFrameDataset, PEACEFrameDataset, PEACEFrameDataset]:
+    max_frames_per_video: int | None = None,
+) -> tuple[Dataset, PEACEFrameDataset, PEACEFrameDataset]:
     """Create train/val/test splits of the dataset.
 
-    Split is done at the sample level with stratification by region+score.
+    Split is done at the VIDEO level globally to prevent data leakage.
     """
-    # First scan to get all samples
     full = PEACEFrameDataset(dataset_path, augmentation_config=augmentation_config)
-    n = len(full.samples)
 
-    # Group indices by (region, score) for stratified split
-    strata: dict[tuple[int, int], list[int]] = {}
-    for i, s in enumerate(full.samples):
-        key = (s["region"], s["score"])
-        strata.setdefault(key, []).append(i)
+    sample_vids = [_extract_video_id(s["path"]) for s in full.samples]
 
+    vid_to_indices: dict[str, list[int]] = {}
+    for i, vid in enumerate(sample_vids):
+        vid_to_indices.setdefault(vid, []).append(i)
+
+    all_vids = sorted(vid_to_indices.keys())
     rng = random.Random(seed)
-    train_indices: list[int] = []
-    val_indices: list[int] = []
-    test_indices: list[int] = []
+    rng.shuffle(all_vids)
 
-    for key, indices in strata.items():
-        rng.shuffle(indices)
-        n_test = max(1, int(len(indices) * test_size))
-        n_val = max(1, int(len(indices) * val_size))
+    n_vids = len(all_vids)
+    n_test = max(1, int(n_vids * test_size))
+    n_val = max(1, int(n_vids * val_size))
 
-        test_indices.extend(indices[:n_test])
-        val_indices.extend(indices[n_test : n_test + n_val])
-        train_indices.extend(indices[n_test + n_val :])
+    test_vids = set(all_vids[:n_test])
+    val_vids = set(all_vids[n_test : n_test + n_val])
+    train_vids = set(all_vids[n_test + n_val :])
+
+    train_indices = [i for vid in train_vids for i in vid_to_indices[vid]]
+    val_indices = [i for vid in val_vids for i in vid_to_indices[vid]]
+    test_indices = [i for vid in test_vids for i in vid_to_indices[vid]]
 
     train_ds = PEACEFrameDataset(
         dataset_path,
@@ -294,4 +330,73 @@ def create_splits(
         augment=False,
     )
 
+    if max_frames_per_video is not None:
+        train_vid_indices: dict[str, list[int]] = {}
+        for i, sample in enumerate(train_ds.samples):
+            vid = _extract_video_id(sample["path"])
+            train_vid_indices.setdefault(vid, []).append(i)
+
+        train_ds = VideoSubsampledDataset(
+            train_ds, train_vid_indices, max_frames_per_video
+        )
+
     return train_ds, val_ds, test_ds
+
+
+def create_kfold_splits(
+    dataset_path: str,
+    n_folds: int = 5,
+    seed: int = 42,
+    augmentation_config: dict | None = None,
+    max_frames_per_video: int | None = None,
+) -> list[tuple[Dataset, PEACEFrameDataset]]:
+    """Create K-fold cross-validation splits at the video level.
+
+    Returns list of (train_ds, val_ds) tuples, one per fold.
+    """
+    full = PEACEFrameDataset(dataset_path, augmentation_config=augmentation_config)
+
+    sample_vids = [_extract_video_id(s["path"]) for s in full.samples]
+    vid_to_indices: dict[str, list[int]] = {}
+    for i, vid in enumerate(sample_vids):
+        vid_to_indices.setdefault(vid, []).append(i)
+
+    all_vids = sorted(vid_to_indices.keys())
+    rng = random.Random(seed)
+    rng.shuffle(all_vids)
+
+    # Assign each video to a fold
+    fold_assignments = [i % n_folds for i in range(len(all_vids))]
+
+    folds = []
+    for fold_idx in range(n_folds):
+        val_vids = {all_vids[i] for i, f in enumerate(fold_assignments) if f == fold_idx}
+        train_vids = {all_vids[i] for i, f in enumerate(fold_assignments) if f != fold_idx}
+
+        train_indices = [i for vid in train_vids for i in vid_to_indices[vid]]
+        val_indices = [i for vid in val_vids for i in vid_to_indices[vid]]
+
+        train_ds = PEACEFrameDataset(
+            dataset_path,
+            split_indices=train_indices,
+            augment=True,
+            augmentation_config=augmentation_config,
+        )
+        val_ds = PEACEFrameDataset(
+            dataset_path,
+            split_indices=val_indices,
+            augment=False,
+        )
+
+        if max_frames_per_video is not None:
+            train_vid_indices: dict[str, list[int]] = {}
+            for i, sample in enumerate(train_ds.samples):
+                vid = _extract_video_id(sample["path"])
+                train_vid_indices.setdefault(vid, []).append(i)
+            train_ds = VideoSubsampledDataset(
+                train_ds, train_vid_indices, max_frames_per_video
+            )
+
+        folds.append((train_ds, val_ds))
+
+    return folds

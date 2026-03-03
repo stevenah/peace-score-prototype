@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.venv
+experiments
+training
+*.egg-info
+.git
+uv.lock
+
+# Force-include model weights (overrides .gitignore)
+!app/models/
+!app/models/*.pt

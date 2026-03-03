@@ -228,7 +228,7 @@ def create_pipeline() -> AnalysisPipeline:
         session = SessionState()
         return AnalysisPipeline(
             classifier=RealPEACEClassifier(manager, session),
-            motion_detector=RealMotionDetector(session),
+            motion_detector=RealMotionDetector(),
             region_detector=RealRegionDetector(session),
             sample_rate_fps=settings.sample_rate_fps,
         )

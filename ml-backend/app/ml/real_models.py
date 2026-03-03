@@ -1,10 +1,10 @@
-"""Real model implementations using the trained multitask PEACE model.
+"""Real model implementations using the trained PEACE model.
 
 Provides adapter classes that implement the base ABCs from mock_models.py,
 backed by a shared ModelManager singleton that owns the GPU model instance.
 
-Each WebSocket connection gets its own adapter instances with independent
-temporal smoothing state, while sharing the model weights via ModelManager.
+The trained model has two heads (region + score). Motion detection falls back
+to simple frame differencing since no motion head is available.
 """
 
 from __future__ import annotations
@@ -22,8 +22,7 @@ from app.ml.mock_models import (
     REGIONS,
     SCORE_LABELS,
 )
-from app.ml.model import PEACEMultitaskModel, MOTIONS
-from app.ml.temporal import TemporalSmoother
+from app.ml.model import PEACEModel
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class ModelManager:
         self.device = self._resolve_device(device)
         logger.info("Loading PEACE model from %s on %s", model_path, self.device)
 
-        self.model = PEACEMultitaskModel(pretrained_backbone=False)
+        self.model = PEACEModel(pretrained_backbone=False)
         if model_path:
             state_dict = torch.load(
                 model_path, map_location=self.device, weights_only=True
@@ -88,49 +87,65 @@ class ModelManager:
     def predict(
         self,
         frame: np.ndarray,
-        prev_features: torch.Tensor | None,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, torch.Tensor]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Run inference on a single frame.
 
         Args:
             frame: (H, W, 3) RGB numpy array (will be resized/normalized)
-            prev_features: (1, neck_dim) tensor from previous frame, or None
 
         Returns:
             region_probs: (3,) numpy array
             score_probs: (4,) numpy array
-            motion_probs: (3,) numpy array
-            features: (1, neck_dim) tensor to cache for next frame
         """
         tensor = self.transform(frame).unsqueeze(0).to(self.device)
 
-        if prev_features is not None:
-            prev_features = prev_features.to(self.device)
-
-        region_logits, score_logits, motion_logits, features = self.model(
-            tensor, prev_features
-        )
+        region_logits, score_logits, _ = self.model(tensor)
 
         region_probs = torch.softmax(region_logits, dim=-1).cpu().numpy()[0]
         score_probs = torch.softmax(score_logits, dim=-1).cpu().numpy()[0]
-        motion_probs = torch.softmax(motion_logits, dim=-1).cpu().numpy()[0]
 
-        return region_probs, score_probs, motion_probs, features.cpu()
+        return region_probs, score_probs
 
 
 class SessionState:
-    """Per-connection state for temporal smoothing and feature caching."""
+    """Per-connection state for temporal smoothing."""
 
     def __init__(self, alpha: float = 0.3):
-        self.smoother = TemporalSmoother(alpha=alpha)
-        self.prev_features: torch.Tensor | None = None
+        self.alpha = alpha
+        self.region_probs: np.ndarray | None = None
+        self.score_probs: np.ndarray | None = None
         self.last_result: dict | None = None
+
+    def smooth(
+        self, region_probs: np.ndarray, score_probs: np.ndarray,
+    ) -> tuple[int, float, int, float]:
+        """EMA smooth and return (region_idx, region_conf, score_idx, score_conf)."""
+        if self.region_probs is None:
+            self.region_probs = region_probs.copy()
+            self.score_probs = score_probs.copy()
+        else:
+            self.region_probs = (
+                self.alpha * region_probs + (1 - self.alpha) * self.region_probs
+            )
+            self.score_probs = (
+                self.alpha * score_probs + (1 - self.alpha) * self.score_probs
+            )
+
+        region_idx = int(np.argmax(self.region_probs))
+        score_idx = int(np.argmax(self.score_probs))
+
+        return (
+            region_idx,
+            float(self.region_probs[region_idx]),
+            score_idx,
+            float(self.score_probs[score_idx]),
+        )
 
 
 class RealPEACEClassifier(BasePEACEClassifier):
-    """Adapter wrapping the multitask model for PEACE score prediction.
+    """Adapter wrapping the model for PEACE score prediction.
 
-    This is called first in the pipeline. It runs the full model inference,
+    This is called first in the pipeline. It runs model inference,
     caches the result in SessionState, and returns the score portion.
     """
 
@@ -139,25 +154,18 @@ class RealPEACEClassifier(BasePEACEClassifier):
         self._session = session
 
     def predict(self, frame: np.ndarray) -> dict:
-        region_probs, score_probs, motion_probs, features = self._manager.predict(
-            frame, self._session.prev_features
+        region_probs, score_probs = self._manager.predict(frame)
+
+        region_idx, region_conf, score_idx, score_conf = self._session.smooth(
+            region_probs, score_probs,
         )
-        self._session.prev_features = features
 
-        (
-            region_idx, region_conf,
-            score_idx, score_conf,
-            motion_idx, motion_conf,
-        ) = self._session.smoother.update(region_probs, score_probs, motion_probs)
-
-        # Cache full result for motion/region detectors to read
+        # Cache for region detector to read
         self._session.last_result = {
             "region": REGIONS[region_idx],
             "region_confidence": region_conf,
             "score": score_idx,
             "score_confidence": score_conf,
-            "motion_direction": MOTIONS[motion_idx],
-            "motion_confidence": motion_conf,
         }
 
         return {
@@ -168,26 +176,37 @@ class RealPEACEClassifier(BasePEACEClassifier):
 
 
 class RealMotionDetector(BaseMotionDetector):
-    """Adapter reading cached motion prediction from SessionState.
+    """Frame-differencing motion detector (no trained motion head)."""
 
-    Must be called after RealPEACEClassifier.predict() on the same frame.
-    """
-
-    def __init__(self, session: SessionState):
-        self._session = session
+    def __init__(self):
+        self._frame_count = 0
 
     def detect(self, frame: np.ndarray, prev_frame: np.ndarray | None) -> dict:
-        result = self._session.last_result
-        if result is None:
+        self._frame_count += 1
+
+        if prev_frame is None:
             return {
                 "direction": "stationary",
                 "confidence": 0.5,
                 "optical_flow_magnitude": 0.0,
             }
+
+        diff = float(np.mean(np.abs(frame.astype(float) - prev_frame.astype(float))))
+
+        if diff < 10:
+            direction = "stationary"
+            confidence = 0.9
+        elif diff < 30:
+            direction = "stationary"
+            confidence = 0.6
+        else:
+            direction = "insertion" if self._frame_count < 50 else "retraction"
+            confidence = min(0.9, 0.5 + diff / 100)
+
         return {
-            "direction": result["motion_direction"],
-            "confidence": round(result["motion_confidence"], 2),
-            "optical_flow_magnitude": 0.0,
+            "direction": direction,
+            "confidence": round(confidence, 2),
+            "optical_flow_magnitude": round(diff, 1),
         }
 
 

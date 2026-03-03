@@ -30,7 +30,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PEACE_USE_MOCK_MODELS=true
+      - PEACE_USE_MOCK_MODELS=false
+      - PEACE_MODEL_PATH=/app/models/best_model.pt
       - PEACE_DEBUG=true
       - PEACE_CORS_ORIGINS=["http://localhost:3000"]
       - PEACE_JOB_DB_PATH=/app/data/jobs.db

@@ -9,6 +9,7 @@ RUN npm ci
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=file:/app/data/dev.db
 RUN npx prisma generate
 
 # --- Dev stage: next dev with hot reload ---
@@ -21,6 +22,7 @@ CMD ["sh", "-c", "npx prisma db push && npx next dev --hostname 0.0.0.0"]
 
 # --- Prod stage: build and serve ---
 FROM base AS prod
+ENV NEXTAUTH_SECRET=build-placeholder
 RUN npm run build
 RUN mkdir -p /app/data
 EXPOSE 3000

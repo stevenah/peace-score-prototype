@@ -1,35 +1,38 @@
 {
-    "dataset_path": "dataset/data-12-classes",
-    "output_dir": "experiments/multitask",
+    "dataset_path": "../dataset/data-12-classes/frames",
+    "output_dir": "experiments/v6_kfold",
     "image_size": 224,
     "batch_size": 32,
     "num_workers": 4,
+    "max_frames_per_video": 16,
+    "label_smoothing": 0.1,
+    "max_grad_norm": 1.0,
     "augmentation": {
         "horizontal_flip": true,
-        "vertical_flip": false,
-        "random_rotation": 10,
-        "color_jitter": 0.1
+        "vertical_flip": true,
+        "random_rotation": 30,
+        "random_affine": true,
+        "color_jitter": 0.3,
+        "gaussian_blur": true,
+        "random_erasing": true
     },
     "optimizer": {
-        "lr": 0.001,
-        "weight_decay": 0.0003
+        "lr": 0.0003,
+        "weight_decay": 0.01
     },
     "scheduler": {
-        "patience": 5,
-        "factor": 0.2,
-        "mode": "min"
+        "T_max": 200,
+        "eta_min": 1e-6
     },
     "training": {
-        "num_epochs": 1500,
-        "patience": 25,
-        "warmup_epochs": 10,
-        "save_interval": 5
+        "num_epochs": 200,
+        "patience": 30,
+        "warmup_epochs": 20,
+        "save_interval": 10
     },
     "loss_weights": {
         "region": 1.0,
-        "score": 1.0,
-        "score_ordinal": 0.3,
-        "motion": 0.5
+        "score": 1.0
     },
     "splits": {
         "test_size": 0.2,
@@ -38,6 +41,7 @@
     },
     "model": {
         "pretrained_backbone": true,
-        "freeze_backbone": true
+        "freeze_backbone": true,
+        "neck_dim": 128
     }
 }
