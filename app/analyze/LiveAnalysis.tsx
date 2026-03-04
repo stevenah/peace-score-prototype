@@ -30,6 +30,8 @@ export function LiveAnalysis() {
 
   const {
     isConnected,
+    isConnecting,
+    connectionError,
     latestResult,
     results,
     sendFrame,
@@ -127,6 +129,30 @@ export function LiveAnalysis() {
         <p className="text-sm text-red-600 dark:text-red-400">
           Failed to save analysis: {saveError}
         </p>
+      )}
+
+      {/* Connection status */}
+      {isAnalyzing && (
+        <div className="flex items-center gap-2 text-sm">
+          <span
+            className={`inline-block h-2.5 w-2.5 rounded-full ${
+              isConnected
+                ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]"
+                : connectionError
+                  ? "bg-red-500"
+                  : "animate-pulse bg-yellow-500"
+            }`}
+          />
+          <span className="text-muted-foreground">
+            {isConnected
+              ? "Connected to analysis server"
+              : connectionError
+                ? connectionError
+                : isConnecting
+                  ? "Connecting to analysis server..."
+                  : "Disconnected"}
+          </span>
+        </div>
       )}
 
       {/* Video + Live Scores */}

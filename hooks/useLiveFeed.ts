@@ -2,15 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LiveFrameResult } from "@/lib/types";
-import { getWsUrl } from "@/lib/constants";
 
 interface UseLiveFeedOptions {
   enabled: boolean;
-  wsUrl?: string;
 }
 
-export function useLiveFeed({ enabled, wsUrl }: UseLiveFeedOptions) {
+export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [latestResult, setLatestResult] = useState<LiveFrameResult | null>(null);
   const [results, setResults] = useState<LiveFrameResult[]>([]);
   const [framesProcessed, setFramesProcessed] = useState(0);
@@ -23,33 +23,73 @@ export function useLiveFeed({ enabled, wsUrl }: UseLiveFeedOptions) {
         wsRef.current = null;
       }
       setIsConnected(false);
+      setIsConnecting(false);
       return;
     }
 
-    const url = wsUrl || getWsUrl();
+    let cancelled = false;
 
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    async function connect() {
+      setIsConnecting(true);
+      setConnectionError(null);
 
-    ws.onopen = () => setIsConnected(true);
-    ws.onclose = () => setIsConnected(false);
-    ws.onerror = () => setIsConnected(false);
-
-    ws.onmessage = (event) => {
+      // Fetch the WS URL from the server (uses runtime env var ML_BACKEND_URL)
+      let wsUrl: string;
       try {
-        const result: LiveFrameResult = JSON.parse(event.data);
-        setLatestResult(result);
-        setResults((prev) => [...prev, result]);
-        setFramesProcessed((c) => c + 1);
+        const res = await fetch("/api/live");
+        const data = await res.json();
+        wsUrl = data.ws_url;
       } catch {
-        // Ignore parse errors
+        wsUrl = "ws://localhost:8000/api/v1/ws/live";
       }
-    };
+
+      if (cancelled) return;
+
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (cancelled) return;
+        setIsConnected(true);
+        setIsConnecting(false);
+        setConnectionError(null);
+      };
+
+      ws.onclose = () => {
+        if (cancelled) return;
+        setIsConnected(false);
+        setIsConnecting(false);
+      };
+
+      ws.onerror = () => {
+        if (cancelled) return;
+        setIsConnected(false);
+        setIsConnecting(false);
+        setConnectionError("Failed to connect to analysis server");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const result: LiveFrameResult = JSON.parse(event.data);
+          setLatestResult(result);
+          setResults((prev) => [...prev, result]);
+          setFramesProcessed((c) => c + 1);
+        } catch {
+          // Ignore parse errors
+        }
+      };
+    }
+
+    connect();
 
     return () => {
-      ws.close();
+      cancelled = true;
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [enabled, wsUrl]);
+  }, [enabled]);
 
   const sendFrame = useCallback((blob: Blob) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -63,10 +103,13 @@ export function useLiveFeed({ enabled, wsUrl }: UseLiveFeedOptions) {
     setResults([]);
     setLatestResult(null);
     setFramesProcessed(0);
+    setConnectionError(null);
   }, []);
 
   return {
     isConnected,
+    isConnecting,
+    connectionError,
     latestResult,
     results,
     framesProcessed,

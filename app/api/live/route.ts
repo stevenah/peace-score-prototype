@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 
-const ML_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api/v1/ws/live";
+function getWsUrlFromBackend(): string {
+  const backendUrl = process.env.ML_BACKEND_URL || "http://localhost:8000";
+  // Convert http(s) to ws(s)
+  const wsUrl = backendUrl
+    .replace(/^https:\/\//, "wss://")
+    .replace(/^http:\/\//, "ws://");
+  return `${wsUrl}/api/v1/ws/live`;
+}
 
 export async function GET() {
-  // WebSocket upgrade is handled differently in Next.js
-  // For the prototype, the client connects directly to the ML backend WebSocket
-  // This route serves as a fallback / health check
   return NextResponse.json({
-    message: "Live feed WebSocket is available at the ML backend directly",
-    ws_url: ML_WS_URL,
+    ws_url: getWsUrlFromBackend(),
   });
 }

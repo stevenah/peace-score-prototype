@@ -17,7 +17,6 @@ FROM base AS dev
 RUN mkdir -p /app/data
 EXPOSE 3000
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
 CMD ["sh", "-c", "npx prisma db push && npx next dev --hostname 0.0.0.0"]
 
 # --- Prod stage: build and serve ---
@@ -25,6 +24,19 @@ FROM base AS prod
 ENV NEXTAUTH_SECRET=build-placeholder
 RUN npm run build
 RUN mkdir -p /app/data
+
+# Copy standalone output and static/public assets
+RUN cp -r .next/standalone/. ./standalone/
+RUN cp -r .next/static ./standalone/.next/static
+RUN cp -r public ./standalone/public 2>/dev/null || true
+RUN cp docker-entrypoint.sh ./standalone/
+RUN cp -r prisma ./standalone/prisma
+
+# Copy prisma CLI for runtime migrations
+RUN cp -r node_modules/prisma ./standalone/node_modules/prisma
+RUN cp -r node_modules/@prisma ./standalone/node_modules/@prisma
+
+WORKDIR /app/standalone
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"

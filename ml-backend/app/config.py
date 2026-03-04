@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     sample_rate_fps: float = 2.0
     max_upload_size_mb: int = 500
     upload_dir: str = "/tmp/peace-uploads"
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000", "https://peace-frontend.fly.dev"]
     model_path: str = ""
     device: str = "auto"
     job_db_path: str = "/tmp/peace-jobs/jobs.db"
