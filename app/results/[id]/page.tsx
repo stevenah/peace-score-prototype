@@ -1,11 +1,12 @@
 "use client";
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
-import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
+import { MotionVisual } from "@/components/analysis/MotionVisual";
+import { RegionHighlight } from "@/components/scoring/RegionHighlight";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -15,8 +16,8 @@ import {
 } from "@/components/video/VideoPlaybackPlayer";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { formatDuration } from "@/lib/utils";
-import { PEACE_SCORE_COLORS } from "@/lib/constants";
-import type { PeaceScore, MotionDirection, TimelineEntry } from "@/lib/types";
+import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
+import type { PeaceScore, MotionDirection, AnatomicalRegion, TimelineEntry } from "@/lib/types";
 
 export default function ResultsPage({
   params,
@@ -121,10 +122,10 @@ export default function ResultsPage({
 
       {isComplete && results && (
         <div className="space-y-6">
-          {/* Video + Live Scores layout (when video available) */}
-          {hasVideo ? (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
-              <div className="lg:col-span-2">
+          {/* Video + Live Scores layout (matches LiveAnalysis) */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
+            <div className="lg:col-span-3">
+              {hasVideo ? (
                 <VideoPlaybackPlayer
                   ref={playerRef}
                   src={analysis.video_url!}
@@ -137,126 +138,145 @@ export default function ResultsPage({
                   motionDirection={activeEntry?.motion ?? null}
                   region={activeEntry?.region ?? null}
                 />
-              </div>
+              ) : (
+                <Card className="flex h-full items-center justify-center">
+                  <div className="space-y-3 text-center">
+                    <CardHeader>
+                      <CardTitle>Video Details</CardTitle>
+                    </CardHeader>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Duration</p>
+                        <p className="text-lg font-semibold">
+                          {analysis.video_metadata &&
+                          analysis.video_metadata.duration_seconds > 0
+                            ? formatDuration(
+                                analysis.video_metadata.duration_seconds,
+                              )
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Resolution</p>
+                        <p className="text-lg font-semibold">
+                          {analysis.video_metadata &&
+                          analysis.video_metadata.resolution[0] > 0
+                            ? `${analysis.video_metadata.resolution[0]}x${analysis.video_metadata.resolution[1]}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Frames Analyzed
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {analysis.video_metadata?.analyzed_frames || "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Segments</p>
+                        <p className="text-lg font-semibold">
+                          {results.motion_analysis.segments.length || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
 
-              <div className="flex flex-col gap-4">
-                <PeaceScoreCard
-                  score={results.peace_scores.overall.score as PeaceScore}
-                  label={results.peace_scores.overall.label}
-                  size="lg"
-                />
+            <div className="flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
+              {activeEntry ? (
+                <>
+                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      PEACE Score
+                    </p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className="text-4xl font-bold"
+                        style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
+                      >
+                        {activeEntry.peace_score}
+                      </span>
+                      <span className="text-sm text-muted-foreground/60">/ 3</span>
+                    </div>
+                    <p
+                      className="shrink-0 text-sm font-medium"
+                      style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
+                    >
+                      {PEACE_SCORE_LABELS[activeEntry.peace_score as PeaceScore]}
+                    </p>
+                  </Card>
 
-                {activeEntry?.motion && (
-                  <Card>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Motion
                     </p>
-                    <MotionIndicator
-                      direction={activeEntry.motion as MotionDirection}
-                    />
+                    {activeEntry.motion ? (
+                      <MotionVisual
+                        direction={activeEntry.motion as MotionDirection}
+                      />
+                    ) : (
+                      <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                    )}
+                    <span />
                   </Card>
-                )}
 
-                {activeEntry?.region && (
-                  <Card>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Region
                     </p>
-                    <p className="text-base font-medium capitalize text-foreground">
-                      {activeEntry.region}
+                    {activeEntry.region ? (
+                      <RegionHighlight activeRegion={activeEntry.region as AnatomicalRegion} />
+                    ) : (
+                      <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                    )}
+                    <p className="shrink-0 text-sm font-medium capitalize text-foreground">
+                      {activeEntry.region || "\u00A0"}
                     </p>
                   </Card>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      PEACE Score
+                    </p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className="text-4xl font-bold"
+                        style={{ color: PEACE_SCORE_COLORS[results.peace_scores.overall.score as PeaceScore] }}
+                      >
+                        {results.peace_scores.overall.score}
+                      </span>
+                      <span className="text-sm text-muted-foreground/60">/ 3</span>
+                    </div>
+                    <p
+                      className="shrink-0 text-sm font-medium"
+                      style={{ color: PEACE_SCORE_COLORS[results.peace_scores.overall.score as PeaceScore] }}
+                    >
+                      {results.peace_scores.overall.label || PEACE_SCORE_LABELS[results.peace_scores.overall.score as PeaceScore]}
+                    </p>
+                  </Card>
 
-              <div className="lg:col-span-1">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>Video Details</CardTitle>
-                  </CardHeader>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Duration</p>
-                      <p className="text-lg font-semibold">
-                        {analysis.video_metadata &&
-                        analysis.video_metadata.duration_seconds > 0
-                          ? formatDuration(
-                              analysis.video_metadata.duration_seconds,
-                            )
-                          : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Frames Analyzed
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {analysis.video_metadata?.analyzed_frames || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Segments</p>
-                      <p className="text-lg font-semibold">
-                        {results.motion_analysis.segments.length || "—"}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
+                  <Card className="flex flex-1 flex-col items-center text-center">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Motion
+                    </p>
+                    <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                  </Card>
+
+                  <Card className="flex flex-1 flex-col items-center text-center">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Region
+                    </p>
+                    <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                  </Card>
+                </>
+              )}
             </div>
-          ) : (
-            /* Original layout (no video) */
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-              <PeaceScoreCard
-                score={results.peace_scores.overall.score as PeaceScore}
-                label={results.peace_scores.overall.label}
-                size="lg"
-              />
-              <div className="lg:col-span-3">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Video Details</CardTitle>
-                  </CardHeader>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Duration</p>
-                      <p className="text-lg font-semibold">
-                        {analysis.video_metadata &&
-                        analysis.video_metadata.duration_seconds > 0
-                          ? formatDuration(
-                              analysis.video_metadata.duration_seconds,
-                            )
-                          : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Resolution</p>
-                      <p className="text-lg font-semibold">
-                        {analysis.video_metadata &&
-                        analysis.video_metadata.resolution[0] > 0
-                          ? `${analysis.video_metadata.resolution[0]}x${analysis.video_metadata.resolution[1]}`
-                          : "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Frames Analyzed
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {analysis.video_metadata?.analyzed_frames || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Segments</p>
-                      <p className="text-lg font-semibold">
-                        {results.motion_analysis.segments.length || "—"}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
+          </div>
 
           {Object.keys(results.peace_scores.by_region).length > 0 && (
             <PeaceScoreGrid byRegion={results.peace_scores.by_region} />
@@ -323,18 +343,17 @@ export default function ResultsPage({
               <CardHeader>
                 <CardTitle>Motion Segments</CardTitle>
               </CardHeader>
-              <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
                 {results.motion_analysis.segments.map((seg, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2"
+                    className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5"
                   >
                     <MotionIndicator
                       direction={seg.direction as MotionDirection}
                     />
                     <span className="text-xs text-muted-foreground">
-                      {formatDuration(seg.start_time)} →{" "}
-                      {formatDuration(seg.end_time)}
+                      {formatDuration(seg.start_time)} → {formatDuration(seg.end_time)}
                     </span>
                   </div>
                 ))}

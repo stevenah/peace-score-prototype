@@ -70,14 +70,13 @@ class MockPEACEClassifier(BasePEACEClassifier):
 
 
 class MockMotionDetector(BaseMotionDetector):
-    """Simulates insertion/retraction detection using frame differencing."""
+    """Simulates optical-flow motion detection using frame differencing.
 
-    def __init__(self) -> None:
-        self._frame_count = 0
+    Uses mean pixel difference as a proxy for optical flow magnitude and
+    vertical brightness gradient shift to approximate direction.
+    """
 
     def detect(self, frame: np.ndarray, prev_frame: np.ndarray | None) -> dict:
-        self._frame_count += 1
-
         if prev_frame is None:
             return {
                 "direction": "stationary",
@@ -85,22 +84,31 @@ class MockMotionDetector(BaseMotionDetector):
                 "optical_flow_magnitude": 0.0,
             }
 
-        # Use actual frame difference as rough motion signal
         diff = float(np.mean(np.abs(frame.astype(float) - prev_frame.astype(float))))
 
         if diff < 10:
             direction = "stationary"
+            confidence = round(random.uniform(0.8, 0.95), 2)
         elif diff < 30:
-            # Low motion - likely stationary or slow movement
-            direction = random.choice(["insertion", "stationary", "retraction"])
+            direction = "stationary"
+            confidence = round(random.uniform(0.5, 0.7), 2)
         else:
-            # Higher motion - pick based on a simple temporal pattern
-            # Early frames tend to be insertion, later frames retraction
-            direction = "insertion" if self._frame_count < 50 else "retraction"
+            # Use vertical brightness shift as mock direction signal:
+            # compare mean of top half vs bottom half across frames
+            h = frame.shape[0] // 2
+            top_shift = float(np.mean(frame[:h].astype(float) - prev_frame[:h].astype(float)))
+            bot_shift = float(np.mean(frame[h:].astype(float) - prev_frame[h:].astype(float)))
+            if bot_shift > top_shift + 2:
+                direction = "insertion"
+            elif top_shift > bot_shift + 2:
+                direction = "retraction"
+            else:
+                direction = random.choice(["insertion", "retraction"])
+            confidence = round(min(0.95, 0.5 + diff / 100), 2)
 
         return {
             "direction": direction,
-            "confidence": round(random.uniform(0.7, 0.95), 2),
+            "confidence": confidence,
             "optical_flow_magnitude": round(diff, 1),
         }
 

@@ -31,7 +31,7 @@ export function Header() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
-  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isAuthPage = pathname === "/login";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 shadow-[0_1px_3px_0_rgb(0_0_0/0.04)] backdrop-blur-md">

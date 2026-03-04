@@ -91,12 +91,14 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
     };
   }, [enabled]);
 
-  const sendFrame = useCallback((blob: Blob) => {
+  const sendFrame = useCallback((blob: Blob): boolean => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       blob.arrayBuffer().then((buffer) => {
         wsRef.current?.send(buffer);
       });
+      return true;
     }
+    return false;
   }, []);
 
   const reset = useCallback(() => {

@@ -69,8 +69,8 @@ export function UploadAnalysis() {
         ))}
       </div>
 
-      {/* Add more videos (compact uploader) */}
-      {!allComplete && (
+      {/* Add more videos (compact uploader) — hidden while uploading */}
+      {!hasActive && !allComplete && (
         <div className="h-32">
           <VideoUploader onFilesSelect={addFiles} />
         </div>

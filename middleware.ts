@@ -8,7 +8,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  const publicRoutes = ["/login", "/register"];
+  const publicRoutes = ["/login"];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route),
   );

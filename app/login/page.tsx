@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Activity } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -93,15 +92,6 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          No account?{" "}
-          <Link
-            href="/register"
-            className="text-primary hover:text-primary/80"
-          >
-            Register
-          </Link>
-        </p>
       </div>
     </div>
   );

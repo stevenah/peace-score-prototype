@@ -9,6 +9,7 @@ import type { PeaceScore, MotionDirection } from "@/lib/types";
 
 export interface VideoStreamPlayerHandle {
   seekTo: (time: number) => void;
+  pause: () => void;
 }
 
 interface VideoStreamPlayerProps {
@@ -68,7 +69,12 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
       setCurrentTime(time);
       onTimeUpdate?.(time);
     },
-  }), [onTimeUpdate]);
+    pause() {
+      videoRef.current?.pause();
+      setIsPlaying(false);
+      onPlayStateChange?.(false);
+    },
+  }), [onTimeUpdate, onPlayStateChange]);
 
   // Create object URL for the file
   useEffect(() => {
@@ -113,9 +119,11 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0);
+    // Snapshot the time now — toBlob is async and video.currentTime may advance
+    const captureTime = video.currentTime;
     canvas.toBlob(
       (blob) => {
-        if (blob) onFrameCapture(blob, video.currentTime);
+        if (blob) onFrameCapture(blob, captureTime);
       },
       "image/jpeg",
       0.8,

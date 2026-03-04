@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Progress } from "@/components/ui/Progress";
 import { Button } from "@/components/ui/Button";
 import {
   AlertDialog,
@@ -110,10 +109,24 @@ export const AnalysisCard = memo(function AnalysisCard({
         <div className="mt-4">
           {analysis.status === "processing" && (
             <div>
-              <Progress value={50} color="#3b82f6" />
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full w-1/3 animate-pulse rounded-full bg-blue-500"
+                  style={{
+                    animation:
+                      "indeterminate 1.5s ease-in-out infinite alternate",
+                  }}
+                />
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Analyzing frames...
               </p>
+              <style jsx>{`
+                @keyframes indeterminate {
+                  0% { margin-left: 0; width: 33%; }
+                  100% { margin-left: 67%; width: 33%; }
+                }
+              `}</style>
             </div>
           )}
 

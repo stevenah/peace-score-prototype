@@ -3,15 +3,12 @@
 import { lazy, memo, Suspense, useCallback, useMemo } from "react";
 import { ScoreLegend } from "./ScoreLegend";
 import { PEACE_SCORE_COLORS, MOTION_COLORS } from "@/lib/constants";
-import { formatTimestamp } from "@/lib/utils";
 import type { PeaceScore, TimelineEntry } from "@/lib/types";
 
 const LazyRecharts = lazy(() =>
   import("recharts").then((mod) => ({
-    default: ({ data, maxTime, currentTime, onSeek, renderDot, renderTooltip }: {
+    default: ({ data, onSeek, renderDot, renderTooltip }: {
       data: Record<string, unknown>[];
-      maxTime: number;
-      currentTime?: number;
       onSeek?: (time: number) => void;
       renderDot: (props: Record<string, unknown>) => React.ReactElement;
       renderTooltip: (props: Record<string, unknown>) => React.ReactNode;
@@ -28,11 +25,9 @@ const LazyRecharts = lazy(() =>
           <mod.CartesianGrid strokeDasharray="3 3" opacity={0.15} />
           <mod.XAxis
             dataKey="time"
-            type="number"
-            domain={[0, maxTime]}
-            tickFormatter={(v: number) => formatTimestamp(v)}
-            tick={{ fontSize: 10 }}
-            interval="preserveStartEnd"
+            type="category"
+            tick={false}
+            axisLine={false}
           />
           <mod.YAxis
             domain={[0, 3]}
@@ -41,9 +36,6 @@ const LazyRecharts = lazy(() =>
           />
           <mod.Tooltip content={renderTooltip} />
           <mod.ReferenceLine y={2} stroke="#84cc16" strokeDasharray="3 3" opacity={0.4} />
-          {currentTime != null && currentTime > 0 && (
-            <mod.ReferenceLine x={currentTime} stroke="#3b82f6" strokeWidth={1.5} opacity={0.6} />
-          )}
           <mod.Area
             type="stepAfter"
             dataKey="peace_score"
@@ -53,7 +45,7 @@ const LazyRecharts = lazy(() =>
             isAnimationActive={false}
           />
           <mod.Line
-            type="monotone"
+            type="stepAfter"
             dataKey="peace_score"
             stroke="#3b82f6"
             strokeWidth={2}
@@ -88,23 +80,41 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
     return points.length > 0 ? points : [{ time: 0 }, { time: maxTime }];
   }, [timeline, maxTime]);
 
+  // Index of the data point closest to the current playback time
+  const activeIdx = useMemo(() => {
+    if (currentTime == null || timeline.length === 0) return -1;
+    let best = 0;
+    let bestDist = Math.abs(timeline[0].timestamp - currentTime);
+    for (let i = 1; i < timeline.length; i++) {
+      const dist = Math.abs(timeline[i].timestamp - currentTime);
+      if (dist < bestDist) {
+        best = i;
+        bestDist = dist;
+      }
+    }
+    return best;
+  }, [timeline, currentTime]);
+
   const renderDot = useCallback((props: Record<string, unknown>) => {
-    const { cx, cy, payload } = props as {
+    const { cx, cy, index, payload } = props as {
       cx: number;
       cy: number;
+      index: number;
       payload: { peace_score: PeaceScore };
     };
+    const isActive = index === activeIdx;
     return (
       <circle
         key={`dot-${cx}-${cy}`}
         cx={cx}
         cy={cy}
-        r={3}
+        r={isActive ? 5 : 3.5}
         fill={PEACE_SCORE_COLORS[payload.peace_score as PeaceScore]}
-        stroke="none"
+        stroke={isActive ? "#fff" : "none"}
+        strokeWidth={isActive ? 2 : 0}
       />
     );
-  }, []);
+  }, [activeIdx]);
 
   const renderTooltip = useCallback((props: Record<string, unknown>) => {
     const { active, payload } = props as { active?: boolean; payload?: readonly { payload: Record<string, unknown> }[] };
@@ -134,8 +144,6 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
         <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading chart...</div>}>
           <LazyRecharts
             data={data}
-            maxTime={maxTime}
-            currentTime={currentTime}
             onSeek={onSeek}
             renderDot={renderDot}
             renderTooltip={renderTooltip}

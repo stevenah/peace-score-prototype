@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ML_BACKEND_URL } from "@/lib/constants";
 import { prisma } from "@/lib/db";
+import { getPresignedUrl } from "@/lib/s3";
 
 export async function GET(
   _request: NextRequest,
@@ -35,6 +36,21 @@ export async function GET(
         });
       } catch {
         // Non-critical: don't fail the response if DB update fails
+      }
+    }
+
+    // Attach presigned S3 URL if we have an uploaded video
+    if (!data.video_url) {
+      try {
+        const session = await prisma.analysisSession.findUnique({
+          where: { analysisId: id },
+          select: { videoPath: true },
+        });
+        if (session?.videoPath) {
+          data.video_url = await getPresignedUrl(session.videoPath);
+        }
+      } catch {
+        // Non-critical
       }
     }
 

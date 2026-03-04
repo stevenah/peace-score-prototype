@@ -3,8 +3,8 @@
 Provides adapter classes that implement the base ABCs from mock_models.py,
 backed by a shared ModelManager singleton that owns the GPU model instance.
 
-The trained model has two heads (region + score). Motion detection falls back
-to simple frame differencing since no motion head is available.
+The trained model has two heads (region + score). Motion detection uses
+Farneback dense optical flow (OpenCV) to classify insertion/retraction.
 """
 
 from __future__ import annotations
@@ -176,37 +176,88 @@ class RealPEACEClassifier(BasePEACEClassifier):
 
 
 class RealMotionDetector(BaseMotionDetector):
-    """Frame-differencing motion detector (no trained motion head)."""
+    """Optical-flow motion detector using Farneback dense flow.
 
-    def __init__(self):
-        self._frame_count = 0
+    Computes dense optical flow between consecutive frames, then uses the
+    mean vertical component to classify insertion (downward) vs retraction
+    (upward) vs stationary.
+    """
+
+    # Farneback parameters tuned for endoscopy (smooth, medium-sized window)
+    _FLOW_PARAMS: dict = {
+        "pyr_scale": 0.5,
+        "levels": 3,
+        "winsize": 15,
+        "iterations": 3,
+        "poly_n": 5,
+        "poly_sigma": 1.2,
+        "flags": 0,
+    }
+
+    # Thresholds (in pixels of flow per frame)
+    _MAGNITUDE_STATIONARY = 1.5   # below this → stationary
+    _DIRECTION_THRESHOLD = 0.4    # |vy/mag| must exceed this to pick a direction
+
+    def __init__(self) -> None:
+        self._prev_gray: np.ndarray | None = None
+
+    @staticmethod
+    def _to_gray(frame: np.ndarray) -> np.ndarray:
+        """Convert RGB uint8 frame to single-channel grayscale."""
+        import cv2
+        if frame.ndim == 2:
+            return frame
+        return cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
     def detect(self, frame: np.ndarray, prev_frame: np.ndarray | None) -> dict:
-        self._frame_count += 1
+        import cv2
+
+        gray = self._to_gray(frame)
 
         if prev_frame is None:
+            self._prev_gray = gray
             return {
                 "direction": "stationary",
                 "confidence": 0.5,
                 "optical_flow_magnitude": 0.0,
             }
 
-        diff = float(np.mean(np.abs(frame.astype(float) - prev_frame.astype(float))))
+        prev_gray = self._prev_gray if self._prev_gray is not None else self._to_gray(prev_frame)
 
-        if diff < 10:
+        # Dense optical flow → (H, W, 2) with channels (dx, dy)
+        flow = cv2.calcOpticalFlowFarneback(
+            prev_gray, gray, None, **self._FLOW_PARAMS,
+        )
+
+        # Cache for next call
+        self._prev_gray = gray
+
+        # Compute per-pixel magnitude and mean vertical flow
+        mag = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
+        mean_mag = float(np.mean(mag))
+        mean_vy = float(np.mean(flow[..., 1]))  # positive = downward in image
+
+        if mean_mag < self._MAGNITUDE_STATIONARY:
             direction = "stationary"
-            confidence = 0.9
-        elif diff < 30:
-            direction = "stationary"
-            confidence = 0.6
+            confidence = min(0.95, 0.7 + (self._MAGNITUDE_STATIONARY - mean_mag) / self._MAGNITUDE_STATIONARY * 0.25)
         else:
-            direction = "insertion" if self._frame_count < 50 else "retraction"
-            confidence = min(0.9, 0.5 + diff / 100)
+            # Ratio of vertical component to overall magnitude
+            vy_ratio = mean_vy / (mean_mag + 1e-6)
+            if abs(vy_ratio) < self._DIRECTION_THRESHOLD:
+                # Mostly lateral motion — treat as stationary for scope direction
+                direction = "stationary"
+                confidence = 0.5
+            elif vy_ratio > 0:
+                direction = "insertion"   # downward motion in image
+                confidence = min(0.95, 0.5 + abs(vy_ratio))
+            else:
+                direction = "retraction"  # upward motion in image
+                confidence = min(0.95, 0.5 + abs(vy_ratio))
 
         return {
             "direction": direction,
             "confidence": round(confidence, 2),
-            "optical_flow_magnitude": round(diff, 1),
+            "optical_flow_magnitude": round(mean_mag, 2),
         }
 
 

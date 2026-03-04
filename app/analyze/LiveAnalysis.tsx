@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { saveLiveAnalysis } from "@/lib/api-client";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
-import { MotionIndicator } from "@/components/analysis/MotionIndicator";
-import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
+import { MotionVisual } from "@/components/analysis/MotionVisual";
 import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
+import { RegionHighlight } from "@/components/scoring/RegionHighlight";
 import { Card } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
+import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
 import type {
   PeaceScore,
   MotionDirection,
@@ -20,11 +21,22 @@ import type {
 const CAPTURE_INTERVAL_MS = 500;
 const CAPTURE_INTERVAL_S = CAPTURE_INTERVAL_MS / 1000;
 
-export function LiveAnalysis() {
+export type ConnectionStatus = {
+  isAnalyzing: boolean;
+  isConnected: boolean;
+  isConnecting: boolean;
+  connectionError: string | null;
+};
+
+export function LiveAnalysis({
+  onConnectionStatus,
+}: {
+  onConnectionStatus?: (status: ConnectionStatus) => void;
+}) {
   const playerRef = useRef<VideoStreamPlayerHandle>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Whether analysis is actively running (WS connected, frames being captured)
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
 
@@ -32,38 +44,48 @@ export function LiveAnalysis() {
     isConnected,
     isConnecting,
     connectionError,
-    latestResult,
     results,
     sendFrame,
   } = useLiveFeed({
     enabled: isAnalyzing,
   });
 
+  // Report connection status to parent
+  useEffect(() => {
+    onConnectionStatus?.({ isAnalyzing, isConnected, isConnecting, connectionError });
+  }, [onConnectionStatus, isAnalyzing, isConnected, isConnecting, connectionError]);
+
   // Track actual video time for each captured frame so timeline stays in sync
   const [captureTimes, setCaptureTimes] = useState<number[]>([]);
 
-  const { data: sessionData } = useSession();
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleFrameCapture = useCallback((blob: Blob, videoTime: number) => {
-    setCaptureTimes((prev) => [...prev, videoTime]);
-    sendFrame(blob);
+    const sent = sendFrame(blob);
+    if (sent) {
+      setCaptureTimes((prev) => [...prev, videoTime]);
+    }
   }, [sendFrame]);
 
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
-    setVideoEnded(false);
     setIsAnalyzing(true);
     setIsSaved(false);
+    setIsSaving(false);
     setSaveError(null);
     setCaptureTimes([]);
   }, []);
 
-  // Auto-save when video ends and user is logged in
-  useEffect(() => {
-    if (!videoEnded || results.length === 0 || isSaved) return;
-    if (!sessionData?.user) return;
+  // Auto-save analysis when video ends
+  const handleVideoEnd = useCallback(() => {
+    setIsAnalyzing(false);
+
+    if (results.length === 0 || isSaving || isSaved) return;
+
+    setIsSaving(true);
+    setSaveError(null);
 
     const overallScore = Math.min(...results.map((r) => r.peace_score.score));
 
@@ -82,9 +104,15 @@ export function LiveAnalysis() {
       })),
       videoFile: selectedFile ?? undefined,
     })
-      .then(() => setIsSaved(true))
-      .catch((err) => setSaveError(err.message));
-  }, [videoEnded, results, isSaved, sessionData, selectedFile, videoDuration, captureTimes]);
+      .then(() => {
+        setIsSaved(true);
+        setIsSaving(false);
+      })
+      .catch((err) => {
+        setSaveError(err.message);
+        setIsSaving(false);
+      });
+  }, [results, isSaving, isSaved, selectedFile, videoDuration, captureTimes]);
 
   const timeline: TimelineEntry[] = useMemo(
     () =>
@@ -99,59 +127,49 @@ export function LiveAnalysis() {
     [results, captureTimes],
   );
 
-  // When scrubbing or replaying, show the result closest to the current video time
+  // Show the result whose actual capture time is closest to the current video time.
+  // This keeps the score card, motion, and region in sync with the video position
+  // during both live playback and post-analysis scrubbing.
   const displayResult = useMemo(() => {
     if (results.length === 0) return null;
-    // During live analysis (not ended), always show latest
-    if (!videoEnded) return latestResult;
-    // Find the result closest to current playback time
-    let best = results[0];
-    let bestDist = Math.abs(best.frame_index * CAPTURE_INTERVAL_S - currentVideoTime);
+    let bestIdx = 0;
+    let bestDist = Math.abs((captureTimes[0] ?? 0) - currentVideoTime);
     for (let i = 1; i < results.length; i++) {
-      const dist = Math.abs(results[i].frame_index * CAPTURE_INTERVAL_S - currentVideoTime);
+      const t = captureTimes[i] ?? i * CAPTURE_INTERVAL_S;
+      const dist = Math.abs(t - currentVideoTime);
       if (dist < bestDist) {
-        best = results[i];
+        bestIdx = i;
         bestDist = dist;
       }
     }
-    return best;
-  }, [results, latestResult, videoEnded, currentVideoTime]);
+    return results[bestIdx];
+  }, [results, captureTimes, currentVideoTime]);
 
 
   return (
     <div className="space-y-8">
-      {isSaved && (
-        <p className="text-sm text-green-600 dark:text-green-400">
-          Analysis saved to your dashboard.
-        </p>
-      )}
-      {saveError && (
-        <p className="text-sm text-red-600 dark:text-red-400">
-          Failed to save analysis: {saveError}
-        </p>
-      )}
-
-      {/* Connection status */}
-      {isAnalyzing && (
-        <div className="flex items-center gap-2 text-sm">
-          <span
-            className={`inline-block h-2.5 w-2.5 rounded-full ${
-              isConnected
-                ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]"
-                : connectionError
-                  ? "bg-red-500"
-                  : "animate-pulse bg-yellow-500"
-            }`}
-          />
-          <span className="text-muted-foreground">
-            {isConnected
-              ? "Connected to analysis server"
-              : connectionError
-                ? connectionError
-                : isConnecting
-                  ? "Connecting to analysis server..."
-                  : "Disconnected"}
-          </span>
+      {/* Auto-save status */}
+      {selectedFile && (isSaving || isSaved || saveError) && (
+        <div className="flex items-center gap-2">
+          {isSaving && (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Saving analysis...</p>
+            </>
+          )}
+          {isSaved && (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Analysis saved to your dashboard.
+              </p>
+            </>
+          )}
+          {saveError && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Failed to save: {saveError}
+            </p>
+          )}
         </div>
       )}
 
@@ -164,7 +182,7 @@ export function LiveAnalysis() {
               file={selectedFile}
               isAnalyzing={isAnalyzing && isConnected}
               onFrameCapture={handleFrameCapture}
-              onVideoEnd={() => setVideoEnded(true)}
+              onVideoEnd={handleVideoEnd}
               onVideoReady={(d) => setVideoDuration(d)}
               onTimeUpdate={setCurrentVideoTime}
               captureIntervalMs={CAPTURE_INTERVAL_MS}
@@ -177,68 +195,89 @@ export function LiveAnalysis() {
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
           {displayResult ? (
             <>
-              <PeaceScoreCard
-                score={displayResult.peace_score.score as PeaceScore}
-                label={displayResult.peace_score.label}
-                size="lg"
-              />
+              <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  PEACE Score
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    className="text-4xl font-bold"
+                    style={{ color: PEACE_SCORE_COLORS[displayResult.peace_score.score as PeaceScore] }}
+                  >
+                    {displayResult.peace_score.score}
+                  </span>
+                  <span className="text-sm text-muted-foreground/60">/ 3</span>
+                </div>
+                <p
+                  className="shrink-0 text-sm font-medium"
+                  style={{ color: PEACE_SCORE_COLORS[displayResult.peace_score.score as PeaceScore] }}
+                >
+                  {displayResult.peace_score.label || PEACE_SCORE_LABELS[displayResult.peace_score.score as PeaceScore]}
+                </p>
+              </Card>
 
-              {displayResult.motion && (
-                <Card>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Motion
-                  </p>
-                  <MotionIndicator
+              <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Motion
+                </p>
+                {displayResult.motion ? (
+                  <MotionVisual
                     direction={displayResult.motion.direction as MotionDirection}
                   />
-                </Card>
-              )}
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                )}
+                <span />
+              </Card>
 
-              {displayResult.region && (
-                <Card>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Region
-                  </p>
-                  <p className="text-base font-medium capitalize text-foreground">
-                    {displayResult.region}
-                  </p>
-                </Card>
-              )}
+              <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
+                <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Region
+                </p>
+                {displayResult.region ? (
+                  <RegionHighlight activeRegion={displayResult.region as AnatomicalRegion} />
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                )}
+                <p className="shrink-0 text-sm font-medium capitalize text-foreground">
+                  {displayResult.region || "\u00A0"}
+                </p>
+              </Card>
             </>
           ) : (
             <>
-              <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <Card className="flex flex-1 flex-col items-center text-center">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   PEACE Score
                 </p>
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-bold text-muted-foreground/30">
                     —
                   </span>
                   <span className="text-sm text-muted-foreground/30">/ 3</span>
                 </div>
-                <p className="mt-0.5 text-base font-medium text-muted-foreground/30">
+                <p className="mt-1 text-sm font-medium text-muted-foreground/30">
                   No data
                 </p>
               </Card>
 
-              <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <Card className="flex flex-1 flex-col items-center text-center">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Motion
                 </p>
-                <p className="text-base font-medium text-muted-foreground/30">
+                <p className="text-sm font-medium text-muted-foreground/30">
                   —
                 </p>
               </Card>
 
-              <Card>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <Card className="flex flex-1 flex-col items-center text-center">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Region
                 </p>
-                <p className="text-base font-medium capitalize text-muted-foreground/30">
+                <p className="text-sm font-medium text-muted-foreground/30">
                   —
                 </p>
               </Card>
