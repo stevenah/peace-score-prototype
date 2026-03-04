@@ -153,3 +153,26 @@ export interface AnalysisConfig {
   enable_peace_scoring: boolean;
   regions: AnatomicalRegion[];
 }
+
+// === Batch Upload ===
+
+export type BatchItemStatus =
+  | "pending"
+  | "uploading"
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export interface BatchItem {
+  /** Client-generated ID for tracking before analysisId is assigned */
+  id: string;
+  file: File;
+  status: BatchItemStatus;
+  /** Set after successful upload */
+  analysisId: string | null;
+  /** Analysis response from polling */
+  analysis: AnalysisResponse | null;
+  /** Upload or polling error */
+  error: string | null;
+}

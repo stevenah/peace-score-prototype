@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { ALLOWED_VIDEO_TYPES, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 
 interface VideoUploaderProps {
-  onFileSelect: (file: File) => void;
+  onFilesSelect: (files: File[]) => void;
   disabled?: boolean;
 }
 
 export function VideoUploader({
-  onFileSelect,
+  onFilesSelect,
   disabled,
 }: VideoUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -28,35 +28,47 @@ export function VideoUploader({
     return null;
   }, []);
 
-  const handleFile = useCallback(
-    (file: File) => {
-      const validationError = validateFile(file);
-      if (validationError) {
-        setError(validationError);
-        return;
+  const handleFiles = useCallback(
+    (fileList: FileList) => {
+      const valid: File[] = [];
+      const errors: string[] = [];
+
+      Array.from(fileList).forEach((file) => {
+        const err = validateFile(file);
+        if (err) {
+          errors.push(`${file.name}: ${err}`);
+        } else {
+          valid.push(file);
+        }
+      });
+
+      setError(errors.length > 0 ? errors.join("\n") : null);
+
+      if (valid.length > 0) {
+        onFilesSelect(valid);
       }
-      setError(null);
-      onFileSelect(file);
     },
-    [validateFile, onFileSelect],
+    [validateFile, onFilesSelect],
   );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      if (e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files);
+      }
     },
-    [handleFile],
+    [handleFiles],
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
+      if (e.target.files && e.target.files.length > 0) {
+        handleFiles(e.target.files);
+      }
     },
-    [handleFile],
+    [handleFiles],
   );
 
   return (
@@ -84,14 +96,15 @@ export function VideoUploader({
           )}
         />
         <p className="mb-1 text-sm font-medium text-foreground/80">
-          {isDragOver ? "Drop video here" : "Drag & drop endoscopy video"}
+          {isDragOver ? "Drop videos here" : "Drag & drop endoscopy videos"}
         </p>
         <p className="text-xs text-muted-foreground">
-          MP4, MOV, AVI, MKV up to 500MB
+          MP4, MOV, AVI, MKV up to 500MB each
         </p>
         <input
           ref={inputRef}
           type="file"
+          multiple
           accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,.mp4,.mov,.avi,.mkv"
           onChange={handleChange}
           className="hidden"
@@ -100,7 +113,7 @@ export function VideoUploader({
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="whitespace-pre-line text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
     </div>

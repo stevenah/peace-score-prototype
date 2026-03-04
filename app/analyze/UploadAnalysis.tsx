@@ -1,138 +1,80 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ArrowRight, RotateCcw, Loader2 } from "lucide-react";
+import { FileVideo, RotateCcw } from "lucide-react";
 import { VideoUploader } from "@/components/video/VideoUploader";
-import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
-import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
+import { BatchItemCard } from "@/components/video/BatchItemCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useVideoUpload } from "@/hooks/useVideoUpload";
-import { useAnalysis } from "@/hooks/useAnalysis";
-import type { PeaceScore } from "@/lib/types";
-
-type Phase = "idle" | "uploading" | "processing" | "complete" | "error";
-
-function derivePhase(
-  isUploading: boolean,
-  analysisId: string | null,
-  uploadError: string | null,
-  analysisStatus: string | undefined,
-  pollError: string | null,
-): Phase {
-  if (uploadError || pollError || analysisStatus === "failed") return "error";
-  if (analysisStatus === "completed") return "complete";
-  if (analysisId && !isUploading) return "processing";
-  if (isUploading) return "uploading";
-  return "idle";
-}
+import { useBatchUpload } from "@/hooks/useBatchUpload";
 
 export function UploadAnalysis() {
   const router = useRouter();
   const {
-    upload,
-    isUploading,
-    analysisId,
-    error: uploadError,
+    items,
+    addFiles,
+    removeItem,
     reset,
-  } = useVideoUpload();
-  const { data: analysis, error: pollError } = useAnalysis(analysisId);
+    hasActive,
+    allComplete,
+    completedCount,
+    totalCount,
+  } = useBatchUpload();
 
-  const phase = derivePhase(
-    isUploading,
-    analysisId,
-    uploadError,
-    analysis?.status,
-    pollError,
-  );
-
-  const errorMessage =
-    uploadError || pollError || analysis?.error || "Analysis failed";
-
-  if (phase === "idle") {
-    return <VideoUploader onFileSelect={(file) => upload(file)} />;
+  // No items: show the uploader full-size
+  if (items.length === 0) {
+    return <VideoUploader onFilesSelect={addFiles} />;
   }
 
-  if (phase === "uploading") {
-    return (
-      <Card>
-        <div className="flex items-center gap-3 py-8 justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+  return (
+    <div className="space-y-6">
+      {/* Summary header */}
+      <Card className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-3">
+          <FileVideo className="h-5 w-5 text-primary" />
           <div>
             <p className="text-sm font-medium text-foreground">
-              Uploading video...
+              {completedCount} of {totalCount} complete
             </p>
             <p className="text-xs text-muted-foreground">
-              Sending video to analysis server
+              {hasActive
+                ? "Processing videos..."
+                : allComplete
+                  ? "All analyses finished"
+                  : "Ready"}
             </p>
           </div>
         </div>
-      </Card>
-    );
-  }
-
-  if (phase === "processing" && analysis) {
-    return (
-      <div className="space-y-4">
-        <AnalysisProgress status={analysis.status} progress={analysis.progress} />
-        <p className="text-center text-xs text-muted-foreground">
-          Analysis will continue even if you leave this page
-        </p>
-      </div>
-    );
-  }
-
-  if (phase === "complete" && analysis?.results) {
-    const overallScore = analysis.results.peace_scores.overall.score as PeaceScore;
-    const overallLabel = analysis.results.peace_scores.overall.label;
-
-    return (
-      <div className="space-y-6">
-        <Card className="py-8 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-          <h3 className="mt-3 text-lg font-semibold text-foreground">
-            Analysis Complete
-          </h3>
-          {analysis.video_metadata && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {analysis.video_metadata.analyzed_frames} frames analyzed
-              {analysis.video_metadata.duration_seconds > 0 &&
-                ` \u00b7 ${Math.round(analysis.video_metadata.duration_seconds)}s duration`}
-            </p>
+        <div className="flex gap-2">
+          {allComplete && (
+            <Button variant="secondary" size="sm" onClick={reset}>
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              New Batch
+            </Button>
           )}
-        </Card>
-
-        <div className="flex justify-center">
-          <PeaceScoreCard score={overallScore} label={overallLabel} size="lg" />
-        </div>
-
-        <div className="flex justify-center gap-3">
-          <Button onClick={() => router.push(`/results/${analysisId}`)}>
-            <ArrowRight className="mr-2 h-4 w-4" />
-            View Full Results
-          </Button>
-          <Button variant="secondary" onClick={reset}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Analyze Another
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push("/dashboard")}
+          >
+            View Dashboard
           </Button>
         </div>
-      </div>
-    );
-  }
-
-  if (phase === "error") {
-    return (
-      <Card className="py-8 text-center">
-        <p className="text-sm font-medium text-red-600 dark:text-red-400">
-          {errorMessage}
-        </p>
-        <Button variant="secondary" onClick={reset} className="mt-4">
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Try Again
-        </Button>
       </Card>
-    );
-  }
 
-  return null;
+      {/* Item list */}
+      <div className="space-y-2">
+        {items.map((item) => (
+          <BatchItemCard key={item.id} item={item} onRemove={removeItem} />
+        ))}
+      </div>
+
+      {/* Add more videos (compact uploader) */}
+      {!allComplete && (
+        <div className="h-32">
+          <VideoUploader onFilesSelect={addFiles} />
+        </div>
+      )}
+    </div>
+  );
 }

@@ -173,7 +173,7 @@ export function LiveAnalysis() {
               region={displayResult?.region || null}
             />
           ) : (
-            <VideoUploader onFileSelect={handleFileSelect} />
+            <VideoUploader onFilesSelect={(files) => handleFileSelect(files[0])} />
           )}
         </div>
 
