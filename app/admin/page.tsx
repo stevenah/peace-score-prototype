@@ -50,6 +50,7 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState("USER");
   const [newLimit, setNewLimit] = useState(10);
+  const [newForcePasswordChange, setNewForcePasswordChange] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -100,6 +101,7 @@ export default function AdminPage() {
     setNewPassword("");
     setNewRole("USER");
     setNewLimit(10);
+    setNewForcePasswordChange(false);
     setFormError(null);
   }
 
@@ -117,6 +119,7 @@ export default function AdminPage() {
         password: newPassword,
         role: newRole,
         uploadLimit: newLimit,
+        forcePasswordChange: newForcePasswordChange,
       }),
     });
 
@@ -442,6 +445,18 @@ export default function AdminPage() {
                   </p>
                 </div>
               </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newForcePasswordChange}
+                  onChange={(e) => setNewForcePasswordChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-ring/30"
+                />
+                <span className="text-sm text-foreground/80">
+                  Require password change on first login
+                </span>
+              </label>
             </div>
 
             <AlertDialogFooter>

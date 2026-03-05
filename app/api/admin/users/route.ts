@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { name, email, password, role, uploadLimit } = await request.json();
+  const { name, email, password, role, uploadLimit, forcePasswordChange } = await request.json();
 
   if (!email) {
     return NextResponse.json(
@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       hashedPassword,
       role: role === "ADMIN" ? "ADMIN" : "USER",
       uploadLimit: typeof uploadLimit === "number" ? uploadLimit : 10,
+      forcePasswordChange: forcePasswordChange === true,
     },
   });
 
