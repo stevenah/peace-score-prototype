@@ -55,8 +55,12 @@ export default function AdminPage() {
 
   // Edit user dialog
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [editLimit, setEditLimit] = useState(10);
   const [editRole, setEditRole] = useState("USER");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     const params = new URLSearchParams();
@@ -122,21 +126,32 @@ export default function AdminPage() {
 
   async function handleUpdateUser() {
     if (!editingUser) return;
+    setEditError(null);
     setIsSubmitting(true);
+
+    const payload: Record<string, unknown> = {
+      name: editName || null,
+      email: editEmail,
+      role: editRole,
+      uploadLimit: editLimit,
+    };
+    if (editPassword) {
+      payload.password = editPassword;
+    }
 
     const res = await fetch(`/api/admin/users/${editingUser.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        role: editRole,
-        uploadLimit: editLimit,
-      }),
+      body: JSON.stringify(payload),
     });
 
     setIsSubmitting(false);
     if (res.ok) {
       setEditingUser(null);
       fetchUsers();
+    } else {
+      const data = await res.json();
+      setEditError(data.error || "Failed to update user");
     }
   }
 
@@ -151,8 +166,12 @@ export default function AdminPage() {
 
   function openEditDialog(user: AdminUser) {
     setEditingUser(user);
+    setEditName(user.name || "");
+    setEditEmail(user.email);
+    setEditPassword("");
     setEditRole(user.role);
     setEditLimit(user.uploadLimit);
+    setEditError(null);
   }
 
   function getUsagePercent(user: AdminUser) {
@@ -428,48 +447,100 @@ export default function AdminPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Edit User</AlertDialogTitle>
             <AlertDialogDescription>
-              {editingUser?.name || editingUser?.email} — Update role and upload
-              quota settings.
+              Update user account details for{" "}
+              {editingUser?.name || editingUser?.email}.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="my-4 space-y-3">
+            {editError && (
+              <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                {editError}
+              </p>
+            )}
+
             <div>
-              <label htmlFor="edit-role" className={labelClass}>
-                Role
+              <label htmlFor="edit-name" className={labelClass}>
+                Name
               </label>
-              <select
-                id="edit-role"
-                value={editRole}
-                onChange={(e) => setEditRole(e.target.value)}
+              <input
+                id="edit-name"
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
                 className={inputClass}
-                disabled={editingUser?.id === session?.user?.id}
-              >
-                <option value="USER">User</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              {editingUser?.id === session?.user?.id && (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  You cannot change your own role
-                </p>
-              )}
+                placeholder="John Doe"
+              />
             </div>
 
             <div>
-              <label htmlFor="edit-limit" className={labelClass}>
-                Upload Limit
+              <label htmlFor="edit-email" className={labelClass}>
+                Email <span className="text-red-500">*</span>
               </label>
               <input
-                id="edit-limit"
-                type="number"
-                value={editLimit}
-                onChange={(e) => setEditLimit(parseInt(e.target.value) || 0)}
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                required
                 className={inputClass}
-                min={-1}
+                placeholder="user@example.com"
               />
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                -1 = unlimited, current usage: {editingUser?.uploadCount ?? 0}
-              </p>
+            </div>
+
+            <div>
+              <label htmlFor="edit-password" className={labelClass}>
+                New Password
+              </label>
+              <input
+                id="edit-password"
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                minLength={6}
+                className={inputClass}
+                placeholder="Leave blank to keep current"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-role" className={labelClass}>
+                  Role
+                </label>
+                <select
+                  id="edit-role"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
+                  className={inputClass}
+                  disabled={editingUser?.id === session?.user?.id}
+                >
+                  <option value="USER">User</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+                {editingUser?.id === session?.user?.id && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    You cannot change your own role
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="edit-limit" className={labelClass}>
+                  Upload Limit
+                </label>
+                <input
+                  id="edit-limit"
+                  type="number"
+                  value={editLimit}
+                  onChange={(e) => setEditLimit(parseInt(e.target.value) || 0)}
+                  className={inputClass}
+                  min={-1}
+                />
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  -1 = unlimited, usage: {editingUser?.uploadCount ?? 0}
+                </p>
+              </div>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,6 +16,36 @@ export async function PATCH(
   const body = await request.json();
 
   const updateData: Record<string, unknown> = {};
+
+  if (body.name !== undefined) {
+    updateData.name = body.name || null;
+  }
+
+  if (body.email !== undefined) {
+    if (!body.email || typeof body.email !== "string") {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    }
+    const existing = await prisma.user.findUnique({
+      where: { email: body.email },
+    });
+    if (existing && existing.id !== id) {
+      return NextResponse.json(
+        { error: "Email already in use" },
+        { status: 409 },
+      );
+    }
+    updateData.email = body.email;
+  }
+
+  if (body.password !== undefined) {
+    if (typeof body.password !== "string" || body.password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400 },
+      );
+    }
+    updateData.hashedPassword = await bcrypt.hash(body.password, 10);
+  }
 
   if (body.role !== undefined) {
     if (body.role !== "USER" && body.role !== "ADMIN") {
