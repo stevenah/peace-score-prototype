@@ -20,12 +20,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
-export async function uploadVideo(
+export function uploadVideo(
   file: File,
   onProgress?: (fraction: number) => void,
-): Promise<{ analysis_id: string }> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+): { promise: Promise<{ analysis_id: string }>; abort: () => void } {
+  const xhr = new XMLHttpRequest();
+
+  const promise = new Promise<{ analysis_id: string }>((resolve, reject) => {
     xhr.open("POST", `${API_BASE}/upload`);
 
     xhr.upload.addEventListener("progress", (e) => {
@@ -58,6 +59,8 @@ export async function uploadVideo(
     formData.append("file", file);
     xhr.send(formData);
   });
+
+  return { promise, abort: () => xhr.abort() };
 }
 
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {

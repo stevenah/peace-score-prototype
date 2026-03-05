@@ -12,7 +12,8 @@ export function useVideoUpload() {
     setIsUploading(true);
     setError(null);
     try {
-      const result = await uploadVideo(file);
+      const { promise } = uploadVideo(file);
+      const result = await promise;
       setAnalysisId(result.analysis_id);
       return result.analysis_id;
     } catch (e) {

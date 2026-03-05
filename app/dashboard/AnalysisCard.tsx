@@ -80,6 +80,7 @@ export const AnalysisCard = memo(function AnalysisCard({
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const isComplete = analysis.status === "completed";
+  const isActive = analysis.status === "processing" || analysis.status === "queued";
   const score = analysis.overallScore as PeaceScore | null;
 
   function handleDelete() {
@@ -99,13 +100,14 @@ export const AnalysisCard = memo(function AnalysisCard({
 
   return (
     <div
+      className="h-full"
       role={selectMode ? "button" : undefined}
       tabIndex={selectMode ? 0 : undefined}
       onClick={selectMode ? onToggleSelect : undefined}
       onKeyDown={selectMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect?.(); } } : undefined}
     >
     <Card
-      className={`flex flex-col justify-between transition-all ${selectMode ? "cursor-pointer hover:ring-2 hover:ring-primary/40" : ""} ${selected ? "ring-2 ring-primary bg-primary/10 border-primary/50 shadow-md shadow-primary/10" : ""}`}
+      className={`flex h-full flex-col justify-between transition-all ${selectMode ? "cursor-pointer hover:ring-2 hover:ring-primary/40" : ""} ${selected ? "ring-2 ring-primary bg-primary/10 border-primary/50 shadow-md shadow-primary/10" : ""}`}
     >
       <div>
         {/* Header: filename + status */}
@@ -210,26 +212,34 @@ export const AnalysisCard = memo(function AnalysisCard({
             <button
               type="button"
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+              title={isActive ? "Cancel" : "Delete"}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              {isActive ? <XCircle className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
             </button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete analysis</AlertDialogTitle>
+              <AlertDialogTitle>
+                {isActive ? "Cancel analysis" : "Delete analysis"}
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete &ldquo;{analysis.filename}
+                Are you sure you want to {isActive ? "cancel" : "delete"} &ldquo;{analysis.filename}
                 &rdquo;? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isPending}>Go Back</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDelete();
+                }}
                 disabled={isPending}
               >
-                {isPending ? "Deleting..." : "Delete"}
+                {isPending
+                  ? isActive ? "Canceling..." : "Deleting..."
+                  : isActive ? "Cancel Analysis" : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

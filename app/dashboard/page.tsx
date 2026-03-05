@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -14,8 +14,12 @@ import {
   X,
   CheckSquare,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { usePolling } from "@/hooks/usePolling";
+import { useBatchUpload } from "@/hooks/useBatchUpload";
+import { UploadCard } from "./UploadCard";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -54,6 +58,8 @@ type SortOption =
   | "score-desc"
   | "score-asc"
   | "name-asc";
+
+const PAGE_SIZE_OPTIONS = [12, 24, 48, 96] as const;
 
 const DATE_RANGE_LABELS: Record<DateRange, string> = {
   all: "All Time",
@@ -99,10 +105,12 @@ const EMPTY_STATES: Record<
 export default function DashboardPage() {
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
+  const { items: uploadItems, removeItem: removeUploadItem } = useBatchUpload();
   const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<PeaceScore[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
@@ -111,21 +119,58 @@ export default function DashboardPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isBulkDeleting, startBulkDelete] = useTransition();
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(24);
+  const [totalItems, setTotalItems] = useState(0);
+  const [counts, setCounts] = useState<Record<StatusFilter, number>>({
+    all: 0,
+    processing: 0,
+    completed: 0,
+    failed: 0,
+  });
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchAnalyses = useCallback(async () => {
     try {
-      const res = await fetch("/api/analyses");
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      if (filter !== "all") params.set("status", filter);
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (scoreFilter.length > 0) params.set("scores", scoreFilter.join(","));
+      if (dateRange !== "all") params.set("dateRange", dateRange);
+      params.set("sort", sortBy);
+
+      const res = await fetch(`/api/analyses?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setAnalyses(data);
+        const json = await res.json();
+        setAnalyses(json.data);
+        setTotalItems(json.total);
+        setCounts(json.counts);
+        // If page is beyond available pages (e.g. after deletion), go to last page
+        const maxPage = Math.max(1, Math.ceil(json.total / pageSize));
+        if (page > maxPage) {
+          setPage(maxPage);
+        }
       }
     } catch {
       // Silently fail on poll errors
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page, pageSize, filter, debouncedSearch, scoreFilter, dateRange, sortBy]);
 
-  // Auth redirect + initial fetch
+  // Auth redirect + fetch on param changes
   useEffect(() => {
     if (authStatus === "unauthenticated") {
       router.push("/login");
@@ -136,12 +181,19 @@ export default function DashboardPage() {
     }
   }, [authStatus, router, fetchAnalyses]);
 
+  // Active uploads not yet in the server-fetched list
+  const serverAnalysisIds = new Set(analyses.map((a) => a.analysisId));
+  const activeUploads = uploadItems.filter(
+    (item) =>
+      item.status !== "completed" &&
+      item.status !== "failed" &&
+      !(item.analysisId && serverAnalysisIds.has(item.analysisId)),
+  );
+
   // Auto-refresh if any jobs are in-progress, with backoff.
   // Also poll briefly after mount to catch uploads that were in-flight
   // when navigating here (XHRs complete in background, creating DB records).
-  const hasActiveJobs = analyses.some(
-    (a) => a.status === "processing" || a.status === "queued",
-  );
+  const hasActiveJobs = counts.processing > 0;
   const [recentMount, setRecentMount] = useState(true);
 
   useEffect(() => {
@@ -153,10 +205,10 @@ export default function DashboardPage() {
     interval: hasActiveJobs ? 5000 : 3000,
     backoff: hasActiveJobs,
     maxInterval: 30000,
-    enabled: hasActiveJobs || recentMount,
+    enabled: hasActiveJobs || recentMount || activeUploads.length > 0,
   });
 
-  // Filter & sort
+  // Filter & sort helpers
   const hasActiveFilters =
     search !== "" ||
     scoreFilter.length > 0 ||
@@ -168,6 +220,7 @@ export default function DashboardPage() {
     setScoreFilter([]);
     setDateRange("all");
     setSortBy("date-desc");
+    setPage(1);
   }
 
   function toggleSelect(id: string) {
@@ -180,7 +233,7 @@ export default function DashboardPage() {
   }
 
   function selectAll() {
-    setSelectedIds(new Set(filtered.map((a) => a.id)));
+    setSelectedIds(new Set(analyses.map((a) => a.id)));
   }
 
   function deselectAll() {
@@ -206,88 +259,10 @@ export default function DashboardPage() {
     setScoreFilter((prev) =>
       prev.includes(score) ? prev.filter((s) => s !== score) : [...prev, score],
     );
+    setPage(1);
   }
 
-  const filtered = useMemo(() => {
-    let result = [...analyses];
-
-    // Status filter
-    if (filter !== "all") {
-      result = result.filter((a) => {
-        if (filter === "processing")
-          return a.status === "processing" || a.status === "queued";
-        return a.status === filter;
-      });
-    }
-
-    // Search by filename
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter((a) => a.filename.toLowerCase().includes(q));
-    }
-
-    // Score filter
-    if (scoreFilter.length > 0) {
-      result = result.filter(
-        (a) =>
-          a.overallScore !== null &&
-          scoreFilter.includes(a.overallScore as PeaceScore),
-      );
-    }
-
-    // Date range
-    if (dateRange !== "all") {
-      const now = new Date();
-      let cutoff: Date;
-      switch (dateRange) {
-        case "today":
-          cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          break;
-        case "week":
-          cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          break;
-        case "month":
-          cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          break;
-      }
-      result = result.filter((a) => new Date(a.createdAt) >= cutoff);
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        case "date-asc":
-          return (
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        case "score-desc":
-          return (b.overallScore ?? -1) - (a.overallScore ?? -1);
-        case "score-asc":
-          return (a.overallScore ?? -1) - (b.overallScore ?? -1);
-        case "name-asc":
-          return a.filename.localeCompare(b.filename);
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [analyses, filter, search, scoreFilter, dateRange, sortBy]);
-
   // Counts for tab labels
-  const counts: Record<StatusFilter, number> = {
-    all: analyses.length,
-    processing: analyses.filter(
-      (a) => a.status === "processing" || a.status === "queued",
-    ).length,
-    completed: analyses.filter((a) => a.status === "completed").length,
-    failed: analyses.filter((a) => a.status === "failed").length,
-  };
-
   const filterTabs = [
     { id: "all", label: `All (${counts.all})` },
     { id: "processing", label: `Processing (${counts.processing})` },
@@ -319,7 +294,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {analyses.length > 0 && (
+          {counts.all > 0 && (
             <Button
               variant={selectMode ? "secondary" : "outline"}
               onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
@@ -341,7 +316,10 @@ export default function DashboardPage() {
       <Tabs
         tabs={filterTabs}
         activeTab={filter}
-        onChange={(id) => setFilter(id as StatusFilter)}
+        onChange={(id) => {
+          setFilter(id as StatusFilter);
+          setPage(1);
+        }}
       />
 
       {/* Filter bar */}
@@ -405,7 +383,10 @@ export default function DashboardPage() {
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup
               value={dateRange}
-              onValueChange={(v) => setDateRange(v as DateRange)}
+              onValueChange={(v) => {
+                setDateRange(v as DateRange);
+                setPage(1);
+              }}
             >
               {(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map((key) => (
                 <DropdownMenuRadioItem key={key} value={key}>
@@ -437,7 +418,10 @@ export default function DashboardPage() {
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup
               value={sortBy}
-              onValueChange={(v) => setSortBy(v as SortOption)}
+              onValueChange={(v) => {
+                setSortBy(v as SortOption);
+                setPage(1);
+              }}
             >
               {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
                 <DropdownMenuRadioItem key={key} value={key}>
@@ -459,17 +443,35 @@ export default function DashboardPage() {
             Clear
           </button>
         )}
+
+        {/* Page size */}
+        <div className="ml-auto">
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+            className="h-9 rounded-md border border-border bg-card px-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size} / page
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Bulk action bar */}
-      {selectMode && filtered.length > 0 && (
+      {selectMode && analyses.length > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5">
           <Button
             variant="ghost"
             size="sm"
-            onClick={selectedIds.size === filtered.length ? deselectAll : selectAll}
+            onClick={selectedIds.size === analyses.length ? deselectAll : selectAll}
           >
-            {selectedIds.size === filtered.length ? "Deselect all" : "Select all"}
+            {selectedIds.size === analyses.length ? "Deselect all" : "Select all"}
           </Button>
           <span className="text-sm text-muted-foreground">
             {selectedIds.size} selected
@@ -509,11 +511,12 @@ export default function DashboardPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Only show active uploads on "all" and "processing" tabs */}
       {/* Cards grid or empty state */}
-      {filtered.length === 0 ? (
+      {analyses.length === 0 && (filter === "all" || filter === "processing" ? activeUploads.length === 0 : true) ? (
         <Card className="py-12 text-center">
           <div className="flex flex-col items-center gap-3">
-            {analyses.length > 0 && hasActiveFilters ? (
+            {counts.all > 0 && hasActiveFilters ? (
               <>
                 <Search className="h-12 w-12 text-muted-foreground/40" />
                 <h3 className="text-lg font-medium text-foreground/70">
@@ -550,18 +553,55 @@ export default function DashboardPage() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((analysis) => (
-            <AnalysisCard
-              key={analysis.id}
-              analysis={analysis}
-              onDelete={fetchAnalyses}
-              selectMode={selectMode}
-              selected={selectedIds.has(analysis.id)}
-              onToggleSelect={() => toggleSelect(analysis.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {(filter === "all" || filter === "processing") &&
+              activeUploads.map((item) => (
+                <UploadCard
+                  key={item.id}
+                  item={item}
+                  onRemove={removeUploadItem}
+                />
+              ))}
+            {analyses.map((analysis) => (
+              <AnalysisCard
+                key={analysis.id}
+                analysis={analysis}
+                onDelete={fetchAnalyses}
+                selectMode={selectMode}
+                selected={selectedIds.has(analysis.id)}
+                onToggleSelect={() => toggleSelect(analysis.id)}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
