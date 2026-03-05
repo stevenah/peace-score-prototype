@@ -102,3 +102,31 @@ export async function PATCH(
 
   return NextResponse.json({ user });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  if (id === session.user.id) {
+    return NextResponse.json(
+      { error: "Cannot delete your own account" },
+      { status: 400 },
+    );
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  await prisma.user.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
+}

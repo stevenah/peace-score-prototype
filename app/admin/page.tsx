@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices } from "lucide-react";
+import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -53,6 +53,9 @@ export default function AdminPage() {
   const [newForcePasswordChange, setNewForcePasswordChange] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete user dialog
+  const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
 
   // Edit user dialog
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -162,6 +165,21 @@ export default function AdminPage() {
     } else {
       const data = await res.json();
       setEditError(data.error || "Failed to update user");
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!deletingUser) return;
+    setIsSubmitting(true);
+
+    const res = await fetch(`/api/admin/users/${deletingUser.id}`, {
+      method: "DELETE",
+    });
+
+    setIsSubmitting(false);
+    if (res.ok) {
+      setDeletingUser(null);
+      fetchUsers();
     }
   }
 
@@ -325,6 +343,17 @@ export default function AdminPage() {
                   >
                     <RotateCcw className="h-3 w-3" />
                   </Button>
+                  {user.id !== session?.user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeletingUser(user)}
+                      title="Delete user"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -466,6 +495,39 @@ export default function AdminPage() {
               </Button>
             </AlertDialogFooter>
           </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Dialog */}
+      <AlertDialog
+        open={!!deletingUser}
+        onOpenChange={(open) => {
+          if (!open) setDeletingUser(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-foreground">
+                {deletingUser?.name || deletingUser?.email}
+              </span>
+              ? This will permanently remove their account and all{" "}
+              {deletingUser?._count.analyses ?? 0} analyses. This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isSubmitting}
+              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
+            >
+              {isSubmitting ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
