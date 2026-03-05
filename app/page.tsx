@@ -1,7 +1,5 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-
-export default async function Home() {
-  const session = await auth();
-  redirect(session ? "/dashboard" : "/login");
+// Root route redirect is handled by middleware.
+// This page exists only as a required route entry point.
+export default function RootPage() {
+  return null;
 }

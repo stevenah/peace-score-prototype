@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ML_BACKEND_URL } from "@/lib/constants";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/s3";
 
@@ -8,7 +9,22 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    // Verify user owns this analysis
+    const existing = await prisma.analysisSession.findUnique({
+      where: { analysisId: id },
+      select: { userId: true },
+    });
+    if (existing && existing.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const response = await fetch(`${ML_BACKEND_URL}/api/v1/analyze/${id}`);
 
     if (!response.ok) {

@@ -17,15 +17,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!enabled) {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      setIsConnected(false);
-      setIsConnecting(false);
-      return;
-    }
+    if (!enabled) return;
 
     let cancelled = false;
 
@@ -88,6 +80,8 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
         wsRef.current.close();
         wsRef.current = null;
       }
+      setIsConnected(false);
+      setIsConnecting(false);
     };
   }, [enabled]);
 

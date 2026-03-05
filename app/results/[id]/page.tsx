@@ -49,35 +49,38 @@ export default function ResultsPage({
         )
       : null;
 
+  // Keep totalDuration in a ref so the animation loop always reads the latest value
+  const totalDurationRef = useRef(totalDuration);
+  useEffect(() => {
+    totalDurationRef.current = totalDuration;
+  }, [totalDuration]);
+
   // Animation-based replay (fallback when no video)
-  const tick = useCallback(
-    (now: number) => {
+  useEffect(() => {
+    if (hasVideo || !isPlaying) return;
+
+    lastTickRef.current = 0;
+
+    function tick(now: number) {
       if (!lastTickRef.current) lastTickRef.current = now;
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
       setReplayTime((prev) => {
         const next = prev + delta;
-        if (next >= totalDuration) {
+        if (next >= totalDurationRef.current) {
           setIsPlaying(false);
-          return totalDuration;
+          return totalDurationRef.current;
         }
         return next;
       });
       animRef.current = requestAnimationFrame(tick);
-    },
-    [totalDuration],
-  );
-
-  useEffect(() => {
-    if (hasVideo) return; // video drives time, not animation
-    if (isPlaying) {
-      lastTickRef.current = 0;
-      animRef.current = requestAnimationFrame(tick);
     }
+
+    animRef.current = requestAnimationFrame(tick);
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [isPlaying, tick, hasVideo]);
+  }, [isPlaying, hasVideo]);
 
   const handleRestart = useCallback(() => {
     setReplayTime(0);

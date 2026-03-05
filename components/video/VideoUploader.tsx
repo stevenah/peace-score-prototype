@@ -74,6 +74,9 @@ export function VideoUploader({
   return (
     <div className="flex h-full flex-col space-y-4">
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Upload endoscopy videos — drag and drop or click to browse"
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragOver(true);
@@ -81,6 +84,12 @@ export function VideoUploader({
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
         onClick={() => !disabled && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !disabled) {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors",
           isDragOver

@@ -27,3 +27,12 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["app*", "training*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

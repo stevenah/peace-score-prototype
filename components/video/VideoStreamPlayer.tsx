@@ -235,7 +235,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [isFullscreen, isPlaying, toggleFullscreen]);
+  }, [isFullscreen, isPlaying, toggleFullscreen, handlePause, handlePlay]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 

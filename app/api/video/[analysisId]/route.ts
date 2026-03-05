@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { stat, open } from "fs/promises";
 import { Readable } from "stream";
@@ -6,10 +7,17 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+const ALLOWED_VIDEO_DIR = path.resolve(process.cwd(), "uploads");
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ analysisId: string }> },
 ) {
+  const authSession = await auth();
+  if (!authSession?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { analysisId } = await params;
 
   const session = await prisma.analysisSession.findUnique({
@@ -20,7 +28,16 @@ export async function GET(
     return NextResponse.json({ error: "Video not found" }, { status: 404 });
   }
 
-  const filePath = path.join(process.cwd(), session.videoPath);
+  // Verify ownership
+  if (session.userId !== authSession.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Prevent path traversal
+  const filePath = path.resolve(process.cwd(), session.videoPath);
+  if (!filePath.startsWith(ALLOWED_VIDEO_DIR)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const stats = await stat(filePath);

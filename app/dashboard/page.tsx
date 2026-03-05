@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { usePolling } from "@/hooks/usePolling";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -72,25 +73,25 @@ export default function DashboardPage() {
     }
   }, [authStatus, router, fetchAnalyses]);
 
-  // Auto-refresh if any jobs are in-progress, with backoff
+  // Auto-refresh if any jobs are in-progress, with backoff.
+  // Also poll briefly after mount to catch uploads that were in-flight
+  // when navigating here (XHRs complete in background, creating DB records).
   const hasActiveJobs = analyses.some(
     (a) => a.status === "processing" || a.status === "queued",
   );
+  const [recentMount, setRecentMount] = useState(true);
 
   useEffect(() => {
-    if (!hasActiveJobs) return;
-    let delay = 5000;
-    let timer: ReturnType<typeof setTimeout>;
-    const poll = () => {
-      timer = setTimeout(async () => {
-        await fetchAnalyses();
-        delay = Math.min(delay * 1.5, 30000);
-        poll();
-      }, delay);
-    };
-    poll();
+    const timer = setTimeout(() => setRecentMount(false), 15_000);
     return () => clearTimeout(timer);
-  }, [hasActiveJobs, fetchAnalyses]);
+  }, []);
+
+  usePolling(fetchAnalyses, {
+    interval: hasActiveJobs ? 5000 : 3000,
+    backoff: hasActiveJobs,
+    maxInterval: 30000,
+    enabled: hasActiveJobs || recentMount,
+  });
 
   // Filter
   const filtered =

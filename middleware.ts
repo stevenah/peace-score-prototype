@@ -20,6 +20,13 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Root route: redirect based on auth status
+  if (pathname === "/") {
+    return NextResponse.redirect(
+      new URL(isLoggedIn ? "/dashboard" : "/login", req.nextUrl),
+    );
+  }
+
   // Redirect logged-in users away from login/register
   if (isLoggedIn && isPublicRoute) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
@@ -30,7 +37,7 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Allow other API routes (upload, analysis polling)
+  // API routes handle their own auth (return 401 JSON, not redirects)
   if (isOtherApi) {
     return NextResponse.next();
   }
@@ -44,5 +51,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|public/|api/upload).*)",
+  ],
 };

@@ -20,16 +20,44 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
-export async function uploadVideo(file: File): Promise<{ analysis_id: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
+export async function uploadVideo(
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<{ analysis_id: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/upload`);
 
-  const response = await fetch(`${API_BASE}/upload`, {
-    method: "POST",
-    body: formData,
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(e.loaded / e.total);
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new ApiError(xhr.status, "Invalid JSON response"));
+        }
+      } else {
+        reject(new ApiError(xhr.status, xhr.responseText || "Upload failed"));
+      }
+    });
+
+    xhr.addEventListener("error", () => {
+      reject(new ApiError(0, "Network error during upload"));
+    });
+
+    xhr.addEventListener("abort", () => {
+      reject(new ApiError(0, "Upload aborted"));
+    });
+
+    const formData = new FormData();
+    formData.append("file", file);
+    xhr.send(formData);
   });
-
-  return handleResponse(response);
 }
 
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {

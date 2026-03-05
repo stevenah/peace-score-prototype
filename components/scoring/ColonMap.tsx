@@ -68,12 +68,6 @@ export function ColonMap({
     return '#e5e7eb'; // Gray - not visited
   };
 
-  const getSegmentStroke = (segment: ColonSegment) => {
-    if (currentSegment === segment) return '#1d4ed8';
-    if (segmentsVisited.includes(segment)) return '#374151';
-    return '#9ca3af';
-  };
-
   return (
     <div className="flex flex-1 flex-col bg-card rounded-xl border border-border p-4">
       <h3 className="text-sm font-medium text-muted-foreground mb-2">Colon Map</h3>

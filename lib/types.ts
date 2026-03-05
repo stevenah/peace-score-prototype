@@ -169,6 +169,8 @@ export interface BatchItem {
   id: string;
   file: File;
   status: BatchItemStatus;
+  /** Overall progress 0-1 across upload + processing phases */
+  progress: number;
   /** Set after successful upload */
   analysisId: string | null;
   /** Analysis response from polling */

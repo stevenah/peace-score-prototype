@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PEACE_SCORE_LABELS } from "@/lib/constants";
 import type { PeaceScore } from "@/lib/types";
@@ -8,6 +9,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const authSession = await auth();
+    if (!authSession?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const session = await prisma.analysisSession.findUnique({
       where: { analysisId: id },
@@ -15,6 +21,10 @@ export async function GET(
 
     if (!session) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (session.userId !== authSession.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const score = session.overallScore as PeaceScore | null;

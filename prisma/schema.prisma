@@ -31,4 +31,7 @@ model AnalysisSession {
   videoPath      String?
   createdAt      DateTime  @default(now())
   completedAt    DateTime?
+
+  @@index([userId])
+  @@index([status])
 }

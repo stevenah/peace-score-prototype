@@ -68,9 +68,8 @@ interface PeaceScoreTimelineProps {
 export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, totalDuration, currentTime, onSeek }: PeaceScoreTimelineProps) {
   const maxTime = totalDuration || (timeline.length > 0 ? timeline[timeline.length - 1].timestamp : 0);
 
-  if (maxTime === 0) return null;
-
   const data = useMemo(() => {
+    if (maxTime === 0) return [];
     const points = timeline.map((entry) => ({
       ...entry,
       time: entry.timestamp,
@@ -80,7 +79,6 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
     return points.length > 0 ? points : [{ time: 0 }, { time: maxTime }];
   }, [timeline, maxTime]);
 
-  // Index of the data point closest to the current playback time
   const activeIdx = useMemo(() => {
     if (currentTime == null || timeline.length === 0) return -1;
     let best = 0;
@@ -131,6 +129,8 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
       </div>
     );
   }, []);
+
+  if (maxTime === 0) return null;
 
   return (
     <div>

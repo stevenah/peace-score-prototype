@@ -70,7 +70,10 @@ export const BatchItemCard = memo(function BatchItemCard({
   const config = STATUS_CONFIG[item.status];
   const score = item.analysis?.results?.peace_scores.overall
     .score as PeaceScore | undefined;
-  const progress = item.analysis?.progress ?? 0;
+  const isActive =
+    item.status === "uploading" ||
+    item.status === "queued" ||
+    item.status === "processing";
   const canRemove =
     item.status === "pending" ||
     item.status === "completed" ||
@@ -96,10 +99,10 @@ export const BatchItemCard = memo(function BatchItemCard({
         </div>
       </div>
 
-      {/* Progress bar for processing */}
-      {item.status === "processing" && (
+      {/* Progress bar for active states */}
+      {isActive && (
         <div className="w-24">
-          <Progress value={progress * 100} />
+          <Progress value={item.progress * 100} />
         </div>
       )}
 
