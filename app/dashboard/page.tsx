@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { AnalysisCard } from "./AnalysisCard";
-import { deleteAnalysesBulk } from "./actions";
+import { deleteAnalysesBulk, deleteFailedAnalyses } from "./actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
@@ -118,6 +118,8 @@ export default function DashboardPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isBulkDeleting, startBulkDelete] = useTransition();
+  const [deleteFailedOpen, setDeleteFailedOpen] = useState(false);
+  const [isDeletingFailed, startDeleteFailed] = useTransition();
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -247,6 +249,14 @@ export default function DashboardPage() {
     setSelectedIds(new Set());
   }
 
+  function handleDeleteFailed() {
+    startDeleteFailed(async () => {
+      await deleteFailedAnalyses();
+      setDeleteFailedOpen(false);
+      fetchAnalyses();
+    });
+  }
+
   function handleBulkDelete() {
     startBulkDelete(async () => {
       await deleteAnalysesBulk([...selectedIds]);
@@ -296,6 +306,16 @@ export default function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {counts.failed > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setDeleteFailedOpen(true)}
+              className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/50"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Failed ({counts.failed})
+            </Button>
+          )}
           {counts.all > 0 && (
             <Button
               variant={selectMode ? "secondary" : "outline"}
@@ -508,6 +528,28 @@ export default function DashboardPage() {
               disabled={isBulkDeleting}
             >
               {isBulkDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete failed confirmation dialog */}
+      <AlertDialog open={deleteFailedOpen} onOpenChange={setDeleteFailedOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all failed analyses</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {counts.failed} failed {counts.failed === 1 ? "analysis" : "analyses"}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingFailed}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteFailed}
+              disabled={isDeletingFailed}
+            >
+              {isDeletingFailed ? "Deleting..." : "Delete All Failed"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

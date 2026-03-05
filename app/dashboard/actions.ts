@@ -18,6 +18,17 @@ export async function deleteAnalysis(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteFailedAnalyses() {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await prisma.analysisSession.deleteMany({
+    where: { userId: session.user.id, status: "failed" },
+  });
+
+  revalidatePath("/dashboard");
+}
+
 export async function deleteAnalysesBulk(ids: string[]) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
