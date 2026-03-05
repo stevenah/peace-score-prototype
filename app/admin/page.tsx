@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Shield, Pencil, RotateCcw } from "lucide-react";
+import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -86,6 +86,13 @@ export default function AdminPage() {
       fetchUsers();
     }
   }, [status, session, router, fetchUsers]);
+
+  function generatePassword(length = 16) {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*";
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array, (b) => chars[b % chars.length]).join("");
+  }
 
   function resetAddForm() {
     setNewName("");
@@ -377,18 +384,29 @@ export default function AdminPage() {
 
               <div>
                 <label htmlFor="add-password" className={labelClass}>
-                  Password <span className="text-red-500">*</span>
+                  Password
                 </label>
-                <input
-                  id="add-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className={inputClass}
-                  placeholder="Min 6 characters"
-                />
+                <div className="flex gap-2">
+                  <input
+                    id="add-password"
+                    type={newPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    minLength={newPassword ? 6 : undefined}
+                    className={`${inputClass} flex-1`}
+                    placeholder="Leave blank to let user set on first login"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 shrink-0"
+                    onClick={() => setNewPassword(generatePassword())}
+                    title="Generate random password"
+                  >
+                    <Dices className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -428,9 +446,9 @@ export default function AdminPage() {
 
             <AlertDialogFooter>
               <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
-              <AlertDialogAction type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Creating..." : "Create User"}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </form>
         </AlertDialogContent>
@@ -492,15 +510,27 @@ export default function AdminPage() {
               <label htmlFor="edit-password" className={labelClass}>
                 New Password
               </label>
-              <input
-                id="edit-password"
-                type="password"
-                value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
-                minLength={6}
-                className={inputClass}
-                placeholder="Leave blank to keep current"
-              />
+              <div className="flex gap-2">
+                <input
+                  id="edit-password"
+                  type={editPassword ? "text" : "password"}
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  minLength={6}
+                  className={`${inputClass} flex-1`}
+                  placeholder="Leave blank to keep current"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 shrink-0"
+                  onClick={() => setEditPassword(generatePassword())}
+                  title="Generate random password"
+                >
+                  <Dices className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

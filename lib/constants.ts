@@ -30,13 +30,13 @@ export const PEACE_SCORE_BG_COLORS: Record<PeaceScore, string> = {
 
 export const MOTION_LABELS: Record<MotionDirection, string> = {
   insertion: "Inserting",
-  retraction: "Retracting",
+  withdrawal: "Withdrawal",
   stationary: "Stationary",
 };
 
 export const MOTION_COLORS: Record<MotionDirection, string> = {
   insertion: "#3b82f6", // blue-500
-  retraction: "#f97316", // orange-500
+  withdrawal: "#f97316", // orange-500
   stationary: "#6b7280", // gray-500
 };
 

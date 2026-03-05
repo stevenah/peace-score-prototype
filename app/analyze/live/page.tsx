@@ -8,7 +8,6 @@ import { LiveAnalysis, type ConnectionStatus, type SaveStatus } from "../LiveAna
 export default function LiveAnalysisPage() {
   const [connStatus, setConnStatus] = useState<ConnectionStatus | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
-  const [sourceMode, setSourceMode] = useState<SourceMode>("file");
   const handleConnectionStatus = useCallback(
     (s: ConnectionStatus) => setConnStatus(s),
     [],
@@ -82,8 +81,6 @@ export default function LiveAnalysisPage() {
       <LiveAnalysis
         onConnectionStatus={handleConnectionStatus}
         onSaveStatus={handleSaveStatus}
-        sourceMode={sourceMode}
-        onSourceModeChange={setSourceMode}
       />
     </div>
   );

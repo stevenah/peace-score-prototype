@@ -54,8 +54,8 @@ export const VideoPlaybackPlayer = forwardRef<
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const showRetractionWarning =
-    motionDirection === "retraction" && peaceScore != null && peaceScore < 2;
+  const showWithdrawalWarning =
+    motionDirection === "withdrawal" && peaceScore != null && peaceScore < 2;
 
   useImperativeHandle(
     ref,
@@ -210,17 +210,17 @@ export const VideoPlaybackPlayer = forwardRef<
           onEnded={() => setIsPlaying(false)}
         />
 
-        {showRetractionWarning && (
+        {showWithdrawalWarning && (
           <div className="pointer-events-none absolute inset-0 animate-[flash-red_1s_ease-in-out_infinite] border-[6px] border-red-500/0">
             <div className="absolute inset-0 animate-[flash-red-bg_1s_ease-in-out_infinite] bg-red-500/0" />
           </div>
         )}
 
-        {showRetractionWarning && (
+        {showWithdrawalWarning && (
           <div className="absolute left-1/2 top-6 flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
             <AlertTriangle className="h-5 w-5" />
             <span className="text-sm font-semibold">
-              Insufficient cleaning — retracting
+              Insufficient cleaning — withdrawing
             </span>
           </div>
         )}

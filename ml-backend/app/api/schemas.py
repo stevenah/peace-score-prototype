@@ -21,7 +21,7 @@ class AnatomicalRegion(str, Enum):
 
 class MotionDirection(str, Enum):
     INSERTION = "insertion"
-    RETRACTION = "retraction"
+    WITHDRAWAL = "withdrawal"
     STATIONARY = "stationary"
 
 

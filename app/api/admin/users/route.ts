@@ -45,14 +45,14 @@ export async function POST(request: NextRequest) {
 
   const { name, email, password, role, uploadLimit } = await request.json();
 
-  if (!email || !password) {
+  if (!email) {
     return NextResponse.json(
-      { error: "Email and password are required" },
+      { error: "Email is required" },
       { status: 400 },
     );
   }
 
-  if (password.length < 6) {
+  if (password && password.length < 6) {
     return NextResponse.json(
       { error: "Password must be at least 6 characters" },
       { status: 400 },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
   const user = await prisma.user.create({
     data: {
       name: name || null,

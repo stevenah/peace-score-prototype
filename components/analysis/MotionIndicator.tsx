@@ -8,7 +8,7 @@ interface MotionIndicatorProps {
 
 const icons = {
   insertion: ArrowDown,
-  retraction: ArrowUp,
+  withdrawal: ArrowUp,
   stationary: Pause,
 };
 

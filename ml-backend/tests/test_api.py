@@ -69,7 +69,7 @@ def test_analyze_frame_with_previous_frame(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["motion"] is not None
-    assert body["motion"]["direction"] in ("insertion", "retraction", "stationary")
+    assert body["motion"]["direction"] in ("insertion", "withdrawal", "stationary")
 
 
 def test_analyze_frame_without_previous_has_stationary_motion(client):

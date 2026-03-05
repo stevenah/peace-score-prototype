@@ -55,7 +55,7 @@ class TestMockMotionDetector:
         det = MockMotionDetector()
         result = det.detect(bright_frame, sample_frame)
         assert result["optical_flow_magnitude"] > 0
-        assert result["direction"] in ("insertion", "retraction", "stationary")
+        assert result["direction"] in ("insertion", "withdrawal", "stationary")
         assert 0.0 <= result["confidence"] <= 1.0
 
 

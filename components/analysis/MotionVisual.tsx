@@ -21,7 +21,7 @@ export function MotionVisual({ direction }: MotionVisualProps) {
           </>
         )}
 
-        {direction === "retraction" && (
+        {direction === "withdrawal" && (
           <>
             {/* Single upward arrow */}
             <line x1="40" y1="25" x2="40" y2="95" stroke={color} strokeWidth={4} strokeLinecap="round" />

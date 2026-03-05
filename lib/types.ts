@@ -4,7 +4,7 @@ export type PeaceScore = 0 | 1 | 2 | 3;
 
 export type AnatomicalRegion = "esophagus" | "stomach" | "duodenum";
 
-export type MotionDirection = "insertion" | "retraction" | "stationary";
+export type MotionDirection = "insertion" | "withdrawal" | "stationary";
 
 export type AnalysisStatus = "queued" | "processing" | "completed" | "failed";
 

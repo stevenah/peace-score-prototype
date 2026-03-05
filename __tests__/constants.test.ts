@@ -72,7 +72,7 @@ describe("constants integrity", () => {
 
   it("MOTION_LABELS covers all directions", () => {
     expect(MOTION_LABELS.insertion).toBe("Inserting");
-    expect(MOTION_LABELS.retraction).toBe("Retracting");
+    expect(MOTION_LABELS.withdrawal).toBe("Withdrawal");
     expect(MOTION_LABELS.stationary).toBe("Stationary");
   });
 

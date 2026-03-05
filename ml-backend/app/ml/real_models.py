@@ -4,7 +4,7 @@ Provides adapter classes that implement the base ABCs from mock_models.py,
 backed by a shared ModelManager singleton that owns the GPU model instance.
 
 The trained model has two heads (region + score). Motion detection uses
-Farneback dense optical flow (OpenCV) to classify insertion/retraction.
+Farneback dense optical flow (OpenCV) to classify insertion/withdrawal.
 """
 
 from __future__ import annotations
@@ -179,7 +179,7 @@ class RealMotionDetector(BaseMotionDetector):
     """Optical-flow motion detector using Farneback dense flow.
 
     Computes dense optical flow between consecutive frames, then uses the
-    mean vertical component to classify insertion (downward) vs retraction
+    mean vertical component to classify insertion (downward) vs withdrawal
     (upward) vs stationary.
     """
 
@@ -251,7 +251,7 @@ class RealMotionDetector(BaseMotionDetector):
                 direction = "insertion"   # downward motion in image
                 confidence = min(0.95, 0.5 + abs(vy_ratio))
             else:
-                direction = "retraction"  # upward motion in image
+                direction = "withdrawal"  # upward motion in image
                 confidence = min(0.95, 0.5 + abs(vy_ratio))
 
         return {

@@ -6,31 +6,100 @@ import { useRouter } from "next/navigation";
 import { Activity } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
+type Step = "login" | "set-password";
+
 export default function LoginPage() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const inputClass =
+    "mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    if (step === "login") {
+      // Check if user needs to set a password
+      const checkRes = await fetch("/api/auth/check-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    setIsLoading(false);
+      if (checkRes.ok) {
+        const { needsPassword } = await checkRes.json();
+        if (needsPassword) {
+          setIsLoading(false);
+          setStep("set-password");
+          return;
+        }
+      }
 
-    if (result?.error) {
-      setError("Invalid email or password");
+      // Normal login
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      setIsLoading(false);
+
+      if (result?.error) {
+        setError("Invalid email or password");
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
     } else {
-      router.push("/dashboard");
-      router.refresh();
+      // Set password step
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        setIsLoading(false);
+        return;
+      }
+
+      const setRes = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!setRes.ok) {
+        const data = await setRes.json();
+        setError(data.error || "Failed to set password");
+        setIsLoading(false);
+        return;
+      }
+
+      // Auto sign in after setting password
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      setIsLoading(false);
+
+      if (result?.error) {
+        setError("Password set but sign in failed. Please try again.");
+        setStep("login");
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
     }
   }
 
@@ -40,8 +109,15 @@ export default function LoginPage() {
         <div className="text-center">
           <Activity className="mx-auto h-10 w-10 text-primary" />
           <h1 className="mt-4 text-2xl font-bold text-foreground">
-            Sign in to PEACE Analyzer
+            {step === "login"
+              ? "Sign in to PEACE Analyzer"
+              : "Set Your Password"}
           </h1>
+          {step === "set-password" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your account requires a password. Please create one to continue.
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +140,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground"
+              disabled={step === "set-password"}
+              className={`${inputClass} ${step === "set-password" ? "opacity-60" : ""}`}
               placeholder="you@example.com"
             />
           </div>
@@ -74,24 +151,68 @@ export default function LoginPage() {
               htmlFor="password"
               className="block text-sm font-medium text-foreground/80"
             >
-              Password
+              {step === "login" ? "Password" : "New Password"}
             </label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground"
-              placeholder="••••••••"
+              required={step === "set-password"}
+              minLength={step === "set-password" ? 6 : undefined}
+              className={inputClass}
+              placeholder={
+                step === "login" ? "••••••••" : "Min 6 characters"
+              }
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
+          {step === "set-password" && (
+            <div>
+              <label
+                htmlFor="confirm-password"
+                className="block text-sm font-medium text-foreground/80"
+              >
+                Confirm Password
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                className={inputClass}
+                placeholder="Re-enter your password"
+              />
+            </div>
+          )}
 
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading
+              ? step === "login"
+                ? "Signing in..."
+                : "Setting password..."
+              : step === "login"
+                ? "Sign in"
+                : "Set Password & Sign in"}
+          </Button>
+
+          {step === "set-password" && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep("login");
+                setPassword("");
+                setConfirmPassword("");
+                setError(null);
+              }}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Back to sign in
+            </button>
+          )}
+        </form>
       </div>
     </div>
   );

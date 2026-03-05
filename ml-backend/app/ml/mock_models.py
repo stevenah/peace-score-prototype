@@ -101,9 +101,9 @@ class MockMotionDetector(BaseMotionDetector):
             if bot_shift > top_shift + 2:
                 direction = "insertion"
             elif top_shift > bot_shift + 2:
-                direction = "retraction"
+                direction = "withdrawal"
             else:
-                direction = random.choice(["insertion", "retraction"])
+                direction = random.choice(["insertion", "withdrawal"])
             confidence = round(min(0.95, 0.5 + diff / 100), 2)
 
         return {

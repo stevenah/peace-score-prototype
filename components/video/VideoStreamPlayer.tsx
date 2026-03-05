@@ -68,9 +68,9 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Retraction warning: retracting with insufficient cleaning (score < 2)
-  const showRetractionWarning =
-    motionDirection === "retraction" &&
+  // Withdrawal warning: withdrawing with insufficient cleaning (score < 2)
+  const showWithdrawalWarning =
+    motionDirection === "withdrawal" &&
     peaceScore != null &&
     peaceScore < 2;
 
@@ -351,18 +351,18 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
           />
         )}
 
-        {/* Red flash overlay for retraction warning */}
-        {showRetractionWarning && (
+        {/* Red flash overlay for withdrawal warning */}
+        {showWithdrawalWarning && (
           <div className="pointer-events-none absolute inset-0 animate-[flash-red_1s_ease-in-out_infinite] border-[6px] border-red-500/0">
             <div className="absolute inset-0 bg-red-500/0 animate-[flash-red-bg_1s_ease-in-out_infinite]" />
           </div>
         )}
 
-        {/* Retraction warning badge */}
-        {showRetractionWarning && (
+        {/* Withdrawal warning badge */}
+        {showWithdrawalWarning && (
           <div className="absolute left-1/2 top-6 -translate-x-1/2 flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm animate-pulse">
             <AlertTriangle className="h-5 w-5" />
-            <span className="text-sm font-semibold">Insufficient cleaning — retracting</span>
+            <span className="text-sm font-semibold">Insufficient cleaning — withdrawing</span>
           </div>
         )}
 
