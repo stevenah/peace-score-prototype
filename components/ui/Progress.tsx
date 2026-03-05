@@ -11,6 +11,10 @@ export function Progress({ value, className, color }: ProgressProps) {
 
   return (
     <div
+      role="progressbar"
+      aria-valuenow={clampedValue}
+      aria-valuemin={0}
+      aria-valuemax={100}
       className={cn(
         "h-2 w-full overflow-hidden rounded-full bg-muted",
         className,
