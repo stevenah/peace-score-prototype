@@ -33,6 +33,7 @@ RUN cp prisma.config.ts ./standalone/
 # Copy prisma CLI for runtime migrations
 RUN cp -r node_modules/prisma ./standalone/node_modules/prisma
 RUN cp -r node_modules/@prisma ./standalone/node_modules/@prisma
+RUN cp -r node_modules/bcryptjs ./standalone/node_modules/bcryptjs 2>/dev/null || true
 
 WORKDIR /app/standalone
 EXPOSE 3000
