@@ -21,12 +21,16 @@ interface VideoStreamPlayerProps {
   onVideoReady?: (duration: number) => void;
   onTimeUpdate?: (time: number) => void;
   captureIntervalMs?: number;
+  /** When true, pauses video to let analysis catch up. Resumes automatically when false. */
+  syncPause?: boolean;
   /** Current PEACE score for fullscreen HUD overlay */
   peaceScore?: PeaceScore | null;
   /** Current motion direction for fullscreen HUD overlay */
   motionDirection?: MotionDirection | null;
   /** Current anatomical region for fullscreen HUD overlay */
   region?: string | null;
+  /** Extra content rendered at the right end of the controls bar */
+  controlsRight?: React.ReactNode;
 }
 
 export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStreamPlayerProps>(function VideoStreamPlayer({
@@ -38,9 +42,11 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   onVideoReady,
   onTimeUpdate,
   captureIntervalMs = 500,
+  syncPause = false,
   peaceScore,
   motionDirection,
   region,
+  controlsRight,
 }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,6 +54,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analyzedBucketsRef = useRef<Set<number>>(new Set());
+  const syncPausedRef = useRef(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -102,6 +109,22 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, isAnalyzing, captureIntervalMs]);
+
+  // Pause/resume video to keep it in sync with backend processing
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isAnalyzing) return;
+
+    if (syncPause && !video.paused && isPlaying) {
+      // Backend is behind — pause video until it catches up
+      syncPausedRef.current = true;
+      video.pause();
+    } else if (!syncPause && syncPausedRef.current) {
+      // Backend caught up — resume playback
+      syncPausedRef.current = false;
+      video.play();
+    }
+  }, [syncPause, isAnalyzing, isPlaying]);
 
   const captureFrame = useCallback(() => {
     const video = videoRef.current;
@@ -448,6 +471,8 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
           <span className="text-xs tabular-nums text-muted-foreground">
             {formatDuration(currentTime)} / {formatDuration(duration)}
           </span>
+
+          {controlsRight}
         </div>
       )}
     </div>

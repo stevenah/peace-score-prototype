@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { saveLiveAnalysis } from "@/lib/api-client";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
 import { MotionVisual } from "@/components/analysis/MotionVisual";
-import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
+import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { RegionHighlight } from "@/components/scoring/RegionHighlight";
 import { Card } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
@@ -15,11 +15,13 @@ import type {
   PeaceScore,
   MotionDirection,
   AnatomicalRegion,
-  TimelineEntry,
+  RegionScore,
 } from "@/lib/types";
 
 const CAPTURE_INTERVAL_MS = 500;
 const CAPTURE_INTERVAL_S = CAPTURE_INTERVAL_MS / 1000;
+/** Max frames awaiting backend response before pausing video to stay in sync */
+const MAX_IN_FLIGHT_FRAMES = 2;
 
 /** Minimum confidence to trust a motion direction from the backend */
 const MOTION_CONFIDENCE_THRESHOLD = 0.6;
@@ -36,10 +38,18 @@ export type ConnectionStatus = {
   connectionError: string | null;
 };
 
+export type SaveStatus = {
+  isSaving: boolean;
+  isSaved: boolean;
+  saveError: string | null;
+};
+
 export function LiveAnalysis({
   onConnectionStatus,
+  onSaveStatus,
 }: {
   onConnectionStatus?: (status: ConnectionStatus) => void;
+  onSaveStatus?: (status: SaveStatus) => void;
 }) {
   const playerRef = useRef<VideoStreamPlayerHandle>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -53,6 +63,7 @@ export function LiveAnalysis({
     isConnecting,
     connectionError,
     results,
+    inFlightFrames,
     sendFrame,
   } = useLiveFeed({
     enabled: isAnalyzing,
@@ -69,6 +80,11 @@ export function LiveAnalysis({
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Report save status to parent
+  useEffect(() => {
+    onSaveStatus?.({ isSaving, isSaved, saveError });
+  }, [onSaveStatus, isSaving, isSaved, saveError]);
 
   const handleFrameCapture = useCallback((blob: Blob, videoTime: number) => {
     const sent = sendFrame(blob);
@@ -129,18 +145,33 @@ export function LiveAnalysis({
       });
   }, [results, isSaving, isSaved, selectedFile, videoDuration, captureTimes]);
 
-  const timeline: TimelineEntry[] = useMemo(
-    () =>
-      results.map((r, i) => ({
-        timestamp: captureTimes[i] ?? i * CAPTURE_INTERVAL_S,
-        frame_index: r.frame_index,
-        motion: (r.motion?.direction || "stationary") as MotionDirection,
-        region: (r.region || "stomach") as AnatomicalRegion,
-        peace_score: r.peace_score.score as PeaceScore,
-        confidence: r.peace_score.confidence,
-      })),
-    [results, captureTimes],
-  );
+  // Compute per-region PEACE scores from all results seen so far
+  const byRegion = useMemo(() => {
+    const regionFrames: Record<string, { scores: number[]; confidences: number[]; labels: string[] }> = {};
+    for (const r of results) {
+      const region = r.region || "stomach";
+      if (!regionFrames[region]) {
+        regionFrames[region] = { scores: [], confidences: [], labels: [] };
+      }
+      regionFrames[region].scores.push(r.peace_score.score as number);
+      regionFrames[region].confidences.push(r.peace_score.confidence);
+      if (r.peace_score.label) regionFrames[region].labels.push(r.peace_score.label);
+    }
+
+    const byRegionMap: Partial<Record<AnatomicalRegion, RegionScore>> = {};
+    for (const [region, data] of Object.entries(regionFrames)) {
+      const score = Math.min(...data.scores) as PeaceScore;
+      const avgConfidence = data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length;
+      byRegionMap[region as AnatomicalRegion] = {
+        score,
+        label: PEACE_SCORE_LABELS[score],
+        confidence: avgConfidence,
+        region: region as AnatomicalRegion,
+        frame_scores: [],
+      };
+    }
+    return byRegionMap;
+  }, [results]);
 
   // Show the result whose actual capture time is closest to the current video time.
   // This keeps the score card, motion, and region in sync with the video position
@@ -201,34 +232,43 @@ export function LiveAnalysis({
     return "stationary";
   }, [results, displayResultIdx]);
 
+  const handleStepFrame = useCallback((delta: number) => {
+    if (results.length === 0) return;
+    const nextIdx = Math.max(0, Math.min(results.length - 1, displayResultIdx + delta));
+    const time = captureTimes[nextIdx] ?? nextIdx * CAPTURE_INTERVAL_S;
+    playerRef.current?.seekTo(time);
+    playerRef.current?.pause();
+  }, [results.length, displayResultIdx, captureTimes]);
+
+  const hasFrames = results.length > 0;
+
+  const frameStepper = (
+    <div className={`flex items-center gap-2 ${!hasFrames ? "opacity-30" : ""}`}>
+      <span className="mx-1 h-4 w-px bg-border" />
+      <button
+        type="button"
+        onClick={() => handleStepFrame(-1)}
+        disabled={!hasFrames || displayResultIdx <= 0}
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-foreground/70 transition-colors hover:bg-accent disabled:opacity-30 disabled:pointer-events-none"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+      </button>
+      <span className="text-xs tabular-nums text-muted-foreground">
+        {hasFrames ? `${displayResultIdx + 1} / ${results.length}` : "— / —"}
+      </span>
+      <button
+        type="button"
+        onClick={() => handleStepFrame(1)}
+        disabled={!hasFrames || displayResultIdx >= results.length - 1}
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-foreground/70 transition-colors hover:bg-accent disabled:opacity-30 disabled:pointer-events-none"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-8">
-      {/* Auto-save status */}
-      {selectedFile && (isSaving || isSaved || saveError) && (
-        <div className="flex items-center gap-2">
-          {isSaving && (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Saving analysis...</p>
-            </>
-          )}
-          {isSaved && (
-            <>
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <p className="text-sm text-green-600 dark:text-green-400">
-                Analysis saved to your dashboard.
-              </p>
-            </>
-          )}
-          {saveError && (
-            <p className="text-sm text-red-600 dark:text-red-400">
-              Failed to save: {saveError}
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Video + Live Scores */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
         <div className="lg:col-span-3">
@@ -242,9 +282,11 @@ export function LiveAnalysis({
               onVideoReady={(d) => setVideoDuration(d)}
               onTimeUpdate={setCurrentVideoTime}
               captureIntervalMs={CAPTURE_INTERVAL_MS}
+              syncPause={isAnalyzing && inFlightFrames >= MAX_IN_FLIGHT_FRAMES}
               peaceScore={displayResult ? displayResult.peace_score.score as PeaceScore : null}
               motionDirection={smoothedMotionDirection}
               region={displayResult?.region || null}
+              controlsRight={frameStepper}
             />
           ) : (
             <VideoUploader onFilesSelect={(files) => handleFileSelect(files[0])} />
@@ -344,28 +386,8 @@ export function LiveAnalysis({
         </div>
       </div>
 
-      {/* Score Timeline */}
-      {videoDuration > 0 ? (
-        <PeaceScoreTimeline
-          timeline={timeline}
-          totalDuration={videoDuration}
-          currentTime={currentVideoTime}
-          onSeek={(t) => playerRef.current?.seekTo(t)}
-        />
-      ) : (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium text-foreground/80">
-              Score Timeline
-            </h3>
-          </div>
-          <Card className="flex h-48 items-center justify-center">
-            <p className="text-sm text-muted-foreground/60">
-              Timeline will appear as frames are analyzed
-            </p>
-          </Card>
-        </div>
-      )}
+      {/* Per-region PEACE status cards */}
+      <PeaceScoreGrid byRegion={byRegion} />
     </div>
   );
 }

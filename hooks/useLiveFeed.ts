@@ -14,6 +14,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
   const [latestResult, setLatestResult] = useState<LiveFrameResult | null>(null);
   const [results, setResults] = useState<LiveFrameResult[]>([]);
   const [framesProcessed, setFramesProcessed] = useState(0);
+  const [inFlightFrames, setInFlightFrames] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
           setLatestResult(result);
           setResults((prev) => [...prev, result]);
           setFramesProcessed((c) => c + 1);
+          setInFlightFrames((c) => Math.max(0, c - 1));
         } catch {
           // Ignore parse errors
         }
@@ -87,6 +89,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
 
   const sendFrame = useCallback((blob: Blob): boolean => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      setInFlightFrames((c) => c + 1);
       blob.arrayBuffer().then((buffer) => {
         wsRef.current?.send(buffer);
       });
@@ -99,6 +102,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
     setResults([]);
     setLatestResult(null);
     setFramesProcessed(0);
+    setInFlightFrames(0);
     setConnectionError(null);
   }, []);
 
@@ -109,6 +113,7 @@ export function useLiveFeed({ enabled }: UseLiveFeedOptions) {
     latestResult,
     results,
     framesProcessed,
+    inFlightFrames,
     sendFrame,
     reset,
   };

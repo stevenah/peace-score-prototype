@@ -2,13 +2,18 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { LiveAnalysis, type ConnectionStatus } from "../LiveAnalysis";
+import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { LiveAnalysis, type ConnectionStatus, type SaveStatus } from "../LiveAnalysis";
 
 export default function LiveAnalysisPage() {
   const [connStatus, setConnStatus] = useState<ConnectionStatus | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
   const handleConnectionStatus = useCallback(
     (s: ConnectionStatus) => setConnStatus(s),
+    [],
+  );
+  const handleSaveStatus = useCallback(
+    (s: SaveStatus) => setSaveStatus(s),
     [],
   );
 
@@ -48,13 +53,35 @@ export default function LiveAnalysisPage() {
               </span>
             </div>
           )}
+          {saveStatus?.isSaving && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <span className="text-muted-foreground">Saving...</span>
+            </div>
+          )}
+          {saveStatus?.isSaved && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-green-600 dark:text-green-400">
+                Analysis saved to your dashboard.
+              </span>
+            </div>
+          )}
+          {saveStatus?.saveError && (
+            <span className="text-sm text-red-600 dark:text-red-400">
+              Failed to save: {saveStatus.saveError}
+            </span>
+          )}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Perform real-time frame-by-frame analysis on a video
         </p>
       </div>
 
-      <LiveAnalysis onConnectionStatus={handleConnectionStatus} />
+      <LiveAnalysis
+        onConnectionStatus={handleConnectionStatus}
+        onSaveStatus={handleSaveStatus}
+      />
     </div>
   );
 }
