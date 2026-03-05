@@ -17,3 +17,16 @@ export async function deleteAnalysis(formData: FormData) {
 
   revalidatePath("/dashboard");
 }
+
+export async function deleteAnalysesBulk(ids: string[]) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!ids.length) throw new Error("No IDs provided");
+
+  await prisma.analysisSession.deleteMany({
+    where: { id: { in: ids }, userId: session.user.id },
+  });
+
+  revalidatePath("/dashboard");
+}

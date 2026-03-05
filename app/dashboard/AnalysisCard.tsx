@@ -67,9 +67,15 @@ const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
 export const AnalysisCard = memo(function AnalysisCard({
   analysis,
   onDelete,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
 }: {
   analysis: AnalysisRecord;
   onDelete: () => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -92,10 +98,27 @@ export const AnalysisCard = memo(function AnalysisCard({
     new Date(analysis.createdAt).toLocaleTimeString();
 
   return (
-    <Card className="flex flex-col justify-between">
+    <div
+      role={selectMode ? "button" : undefined}
+      tabIndex={selectMode ? 0 : undefined}
+      onClick={selectMode ? onToggleSelect : undefined}
+      onKeyDown={selectMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect?.(); } } : undefined}
+    >
+    <Card
+      className={`flex flex-col justify-between transition-colors ${selectMode ? "cursor-pointer" : ""} ${selected ? "ring-2 ring-primary" : ""}`}
+    >
       <div>
         {/* Header: filename + status */}
         <div className="flex items-start justify-between gap-2">
+          {selectMode && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggleSelect}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground">
               {analysis.filename}
@@ -222,5 +245,6 @@ export const AnalysisCard = memo(function AnalysisCard({
         </AlertDialog>
       </div>
     </Card>
+    </div>
   );
 });
