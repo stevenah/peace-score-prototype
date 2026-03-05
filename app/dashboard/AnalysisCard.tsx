@@ -105,20 +105,11 @@ export const AnalysisCard = memo(function AnalysisCard({
       onKeyDown={selectMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect?.(); } } : undefined}
     >
     <Card
-      className={`flex flex-col justify-between transition-colors ${selectMode ? "cursor-pointer" : ""} ${selected ? "ring-2 ring-primary" : ""}`}
+      className={`flex flex-col justify-between transition-all ${selectMode ? "cursor-pointer hover:ring-2 hover:ring-primary/40" : ""} ${selected ? "ring-2 ring-primary bg-primary/10 border-primary/50 shadow-md shadow-primary/10" : ""}`}
     >
       <div>
         {/* Header: filename + status */}
         <div className="flex items-start justify-between gap-2">
-          {selectMode && (
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onToggleSelect}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
-            />
-          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground">
               {analysis.filename}

@@ -317,10 +317,6 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {session?.user?.name || session?.user?.email}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {analyses.length} total{" "}
-            {analyses.length === 1 ? "analysis" : "analyses"}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           {analyses.length > 0 && (
@@ -468,15 +464,13 @@ export default function DashboardPage() {
       {/* Bulk action bar */}
       {selectMode && filtered.length > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={filtered.length > 0 && selectedIds.size === filtered.length}
-              onChange={selectedIds.size === filtered.length ? deselectAll : selectAll}
-              className="h-4 w-4 rounded border-border accent-primary"
-            />
-            Select all
-          </label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={selectedIds.size === filtered.length ? deselectAll : selectAll}
+          >
+            {selectedIds.size === filtered.length ? "Deselect all" : "Select all"}
+          </Button>
           <span className="text-sm text-muted-foreground">
             {selectedIds.size} selected
           </span>
