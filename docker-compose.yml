@@ -1,4 +1,15 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=peace_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   frontend:
     build:
       context: .
@@ -10,7 +21,7 @@ services:
       - ML_BACKEND_URL=http://ml-backend:8000
       - ML_BACKEND_PUBLIC_URL=http://localhost:8000
       - AUTH_TRUST_HOST=true
-      - DATABASE_URL=file:/app/data/dev.db
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/peace_dev
       - NEXTAUTH_SECRET=peace-analyzer-dev-secret-change-in-production
     volumes:
       - ./app:/app/app
@@ -19,8 +30,8 @@ services:
       - ./lib:/app/lib
       - ./public:/app/public
       - ./prisma:/app/prisma
-      - ./.docker-data:/app/data
     depends_on:
+      - postgres
       - ml-backend
 
   ml-backend:
@@ -41,3 +52,6 @@ services:
       - ./ml-backend/app:/app/app
       - ./ml-backend/app/models:/app/models
       - ./.docker-data/ml:/app/data
+
+volumes:
+  pgdata:

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { filename, overallScore, framesAnalyzed, duration, timeline } =
+    const { filename, overallScore, minScore, maxScore, avgScore, framesAnalyzed, duration, timeline } =
       JSON.parse(metadataRaw);
 
     if (!filename || typeof framesAnalyzed !== "number") {
@@ -54,6 +54,9 @@ export async function POST(request: NextRequest) {
         filename,
         status: "completed",
         overallScore: typeof overallScore === "number" ? overallScore : null,
+        minScore: typeof minScore === "number" ? minScore : null,
+        maxScore: typeof maxScore === "number" ? maxScore : null,
+        avgScore: typeof avgScore === "number" ? avgScore : null,
         framesAnalyzed,
         duration: typeof duration === "number" ? duration : null,
         timelineData: Array.isArray(timeline)

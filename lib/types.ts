@@ -139,6 +139,9 @@ export interface AnalysisRecord {
   filename: string;
   status: string;
   overallScore: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+  avgScore: number | null;
   framesAnalyzed: number | null;
   duration: number | null;
   createdAt: string;

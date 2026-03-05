@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -28,6 +28,9 @@ model AnalysisSession {
   filename       String
   status         String    @default("processing")
   overallScore   Int?
+  minScore       Int?
+  maxScore       Int?
+  avgScore       Float?
   framesAnalyzed Int?
   duration       Float?
   timelineData   String?

@@ -99,6 +99,9 @@ export async function analyzeFrame(
 export async function saveLiveAnalysis(data: {
   filename: string;
   overallScore: number | null;
+  minScore: number | null;
+  maxScore: number | null;
+  avgScore: number | null;
   framesAnalyzed: number;
   duration: number | null;
   timeline: unknown[];
@@ -110,6 +113,9 @@ export async function saveLiveAnalysis(data: {
     JSON.stringify({
       filename: data.filename,
       overallScore: data.overallScore,
+      minScore: data.minScore,
+      maxScore: data.maxScore,
+      avgScore: data.avgScore,
       framesAnalyzed: data.framesAnalyzed,
       duration: data.duration,
       timeline: data.timeline,

@@ -45,3 +45,20 @@ export function formatFileSize(bytes: number): string {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+/** Compute min, max, avg from an array of PEACE scores (0-3). */
+export function computeScoreStats(scores: number[]): {
+  minScore: number | null;
+  maxScore: number | null;
+  avgScore: number | null;
+} {
+  if (scores.length === 0) return { minScore: null, maxScore: null, avgScore: null };
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+  return {
+    minScore: min,
+    maxScore: max,
+    avgScore: Math.round(avg * 100) / 100,
+  };
+}

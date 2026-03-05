@@ -36,27 +36,7 @@ export async function POST(request: NextRequest) {
     }
     userId = session.user.id;
 
-    // Quota check
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { uploadLimit: true, uploadCount: true },
-    });
-
-    if (
-      currentUser &&
-      currentUser.uploadLimit !== -1 &&
-      currentUser.uploadCount >= currentUser.uploadLimit
-    ) {
-      return NextResponse.json(
-        {
-          error: "Upload limit reached",
-          message: `You have reached your upload limit of ${currentUser.uploadLimit} analyses. Contact an administrator to increase your quota.`,
-          quotaExceeded: true,
-        },
-        { status: 429 },
-      );
-    }
-
+    // Parse form data first so we have the filename for error records
     let formData: FormData;
     try {
       formData = await request.formData();
@@ -76,7 +56,66 @@ export async function POST(request: NextRequest) {
 
     filename = file instanceof File ? file.name : "upload.mp4";
 
+    // Quota check — done after form parse so we have the filename for
+    // the failed record, but before any heavy processing.
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { uploadLimit: true, uploadCount: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (
+      currentUser.uploadLimit !== -1 &&
+      currentUser.uploadCount >= currentUser.uploadLimit
+    ) {
+      await createFailedRecord(userId, filename);
+      return NextResponse.json(
+        {
+          error: "Upload limit reached",
+          message: `You have reached your upload limit of ${currentUser.uploadLimit} analyses. Contact an administrator to increase your quota.`,
+          quotaExceeded: true,
+        },
+        { status: 429 },
+      );
+    }
+
+    // Reserve a slot atomically: only increment if still under the limit.
+    // The WHERE clause ensures concurrent requests can't exceed the limit.
+    let reserved = false;
+    if (currentUser.uploadLimit === -1) {
+      // Unlimited — increment without a cap check
+      await prisma.user.update({
+        where: { id: userId },
+        data: { uploadCount: { increment: 1 } },
+      });
+      reserved = true;
+    } else {
+      const result = await prisma.$executeRaw`
+        UPDATE "User"
+        SET "uploadCount" = "uploadCount" + 1
+        WHERE "id" = ${userId}
+          AND "uploadCount" < "uploadLimit"
+      `;
+      reserved = result > 0;
+    }
+
+    if (!reserved) {
+      await createFailedRecord(userId, filename);
+      return NextResponse.json(
+        {
+          error: "Upload limit reached",
+          message: `You have reached your upload limit of ${currentUser.uploadLimit} analyses. Contact an administrator to increase your quota.`,
+          quotaExceeded: true,
+        },
+        { status: 429 },
+      );
+    }
+
     if (file.size > MAX_FILE_SIZE) {
+      await releaseSlot(userId);
       await createFailedRecord(userId, filename);
       return NextResponse.json({ error: "File too large (max 500MB)" }, { status: 413 });
     }
@@ -84,6 +123,7 @@ export async function POST(request: NextRequest) {
     // Validate file content via magic bytes
     const headerBytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
     if (!isValidVideoFile(headerBytes)) {
+      await releaseSlot(userId);
       await createFailedRecord(userId, filename);
       return NextResponse.json({ error: "Invalid video file format" }, { status: 400 });
     }
@@ -99,6 +139,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const text = await response.text();
+      await releaseSlot(userId);
       await createFailedRecord(userId, filename);
       return NextResponse.json(
         { error: `ML backend error: ${text}` },
@@ -136,17 +177,13 @@ export async function POST(request: NextRequest) {
           videoPath,
         },
       });
-
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { uploadCount: { increment: 1 } },
-      });
     }
 
     return NextResponse.json({ ...data, videoStorageFailed });
   } catch (error) {
     console.error("Upload error:", error);
     if (userId) {
+      await releaseSlot(userId).catch(() => {});
       await createFailedRecord(userId, filename).catch(() => {});
     }
     return NextResponse.json(
@@ -154,6 +191,14 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+async function releaseSlot(userId: string) {
+  await prisma.$executeRaw`
+    UPDATE "User"
+    SET "uploadCount" = GREATEST("uploadCount" - 1, 0)
+    WHERE "id" = ${userId}
+  `;
 }
 
 async function createFailedRecord(userId: string, filename: string) {

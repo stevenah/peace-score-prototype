@@ -181,7 +181,9 @@ export default function DashboardPage() {
     }
   }, [authStatus, router, fetchAnalyses]);
 
-  // Active uploads not yet in the server-fetched list
+  // Active uploads not yet in the server-fetched list.
+  // Failed items are excluded — the server creates DB records for all
+  // failures, so they appear as AnalysisCards after the next poll.
   const serverAnalysisIds = new Set(analyses.map((a) => a.analysisId));
   const activeUploads = uploadItems.filter(
     (item) =>
@@ -262,10 +264,10 @@ export default function DashboardPage() {
     setPage(1);
   }
 
-  // Counts for tab labels
+  // Counts for tab labels (include client-side uploads not yet in the database)
   const filterTabs = [
-    { id: "all", label: `All (${counts.all})` },
-    { id: "processing", label: `Processing (${counts.processing})` },
+    { id: "all", label: `All (${counts.all + activeUploads.length})` },
+    { id: "processing", label: `Processing (${counts.processing + activeUploads.length})` },
     { id: "completed", label: `Completed (${counts.completed})` },
     { id: "failed", label: `Failed (${counts.failed})` },
   ];
@@ -511,7 +513,6 @@ export default function DashboardPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Only show active uploads on "all" and "processing" tabs */}
       {/* Cards grid or empty state */}
       {analyses.length === 0 && (filter === "all" || filter === "processing" ? activeUploads.length === 0 : true) ? (
         <Card className="py-12 text-center">

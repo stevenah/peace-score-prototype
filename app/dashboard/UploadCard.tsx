@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import {
+  AlertTriangle,
   Clock,
   Loader2,
   Upload,
@@ -40,6 +41,12 @@ const STATUS_CONFIG: Record<
     label: "Processing",
     bgColor: "#dbeafe",
     color: "#1e40af",
+  },
+  failed: {
+    icon: <AlertTriangle className="h-3 w-3" />,
+    label: "Failed",
+    bgColor: "#fee2e2",
+    color: "#991b1b",
   },
 };
 
@@ -118,14 +125,23 @@ export const UploadCard = memo(function UploadCard({
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Upload className="h-3 w-3" />
-          In progress
+          {item.status === "failed" ? (
+            <>
+              <AlertTriangle className="h-3 w-3 text-red-500" />
+              <span className="text-red-500">Upload failed</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-3 w-3" />
+              In progress
+            </>
+          )}
         </div>
         <button
           type="button"
           onClick={() => onRemove(item.id)}
           className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
-          title="Cancel"
+          title={item.status === "failed" ? "Dismiss" : "Cancel"}
         >
           <X className="h-3.5 w-3.5" />
         </button>

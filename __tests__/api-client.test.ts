@@ -130,6 +130,9 @@ describe("saveLiveAnalysis", () => {
     const result = await saveLiveAnalysis({
       filename: "test.mp4",
       overallScore: 2,
+      minScore: 1,
+      maxScore: 3,
+      avgScore: 2.1,
       framesAnalyzed: 50,
       duration: 30,
       timeline: [],
@@ -156,6 +159,9 @@ describe("saveLiveAnalysis", () => {
     await saveLiveAnalysis({
       filename: "test.mp4",
       overallScore: null,
+      minScore: null,
+      maxScore: null,
+      avgScore: null,
       framesAnalyzed: 10,
       duration: null,
       timeline: [],

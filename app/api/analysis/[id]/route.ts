@@ -3,6 +3,7 @@ import { ML_BACKEND_URL } from "@/lib/constants";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/s3";
+import { computeScoreStats } from "@/lib/utils";
 
 export async function GET(
   _request: NextRequest,
@@ -40,12 +41,19 @@ export async function GET(
     // Update analysis session when status changes to completed/failed
     if (data.status === "completed" || data.status === "failed") {
       try {
+        const timeline: { peace_score: number }[] = data.results?.timeline ?? [];
+        const frameScores = timeline.map((e) => e.peace_score);
+        const stats = computeScoreStats(frameScores);
+
         await prisma.analysisSession.updateMany({
           where: { analysisId: id },
           data: {
             status: data.status,
             completedAt: new Date(),
             overallScore: data.results?.peace_scores?.overall?.score ?? null,
+            minScore: stats.minScore,
+            maxScore: stats.maxScore,
+            avgScore: stats.avgScore,
             framesAnalyzed: data.video_metadata?.analyzed_frames ?? null,
             duration: data.video_metadata?.duration_seconds ?? null,
           },

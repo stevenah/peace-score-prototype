@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ML_BACKEND_URL } from "@/lib/constants";
+import { computeScoreStats } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -122,6 +123,10 @@ export async function GET(request: NextRequest) {
         const data = await res.json();
 
         if (data.status === "completed" || data.status === "failed") {
+          const timeline: { peace_score: number }[] = data.results?.timeline ?? [];
+          const frameScores = timeline.map((e) => e.peace_score);
+          const stats = computeScoreStats(frameScores);
+
           await prisma.analysisSession.updateMany({
             where: { analysisId: job.analysisId },
             data: {
@@ -129,6 +134,9 @@ export async function GET(request: NextRequest) {
               completedAt: new Date(),
               overallScore:
                 data.results?.peace_scores?.overall?.score ?? null,
+              minScore: stats.minScore,
+              maxScore: stats.maxScore,
+              avgScore: stats.avgScore,
               framesAnalyzed:
                 data.video_metadata?.analyzed_frames ?? null,
               duration: data.video_metadata?.duration_seconds ?? null,
@@ -144,6 +152,9 @@ export async function GET(request: NextRequest) {
               completedAt: new Date(),
               overallScore:
                 data.results?.peace_scores?.overall?.score ?? null,
+              minScore: stats.minScore,
+              maxScore: stats.maxScore,
+              avgScore: stats.avgScore,
               framesAnalyzed:
                 data.video_metadata?.analyzed_frames ?? null,
               duration:

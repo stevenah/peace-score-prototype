@@ -170,6 +170,13 @@ export const AnalysisCard = memo(function AnalysisCard({
                 </p>
               </div>
               <div className="flex-1 space-y-1 text-xs text-muted-foreground">
+                {analysis.minScore != null && analysis.maxScore != null && analysis.avgScore != null && (
+                  <div className="flex gap-3">
+                    <span>Min <span className="font-medium text-foreground">{analysis.minScore}</span></span>
+                    <span>Max <span className="font-medium text-foreground">{analysis.maxScore}</span></span>
+                    <span>Avg <span className="font-medium text-foreground">{analysis.avgScore.toFixed(1)}</span></span>
+                  </div>
+                )}
                 {analysis.framesAnalyzed != null && (
                   <p>{analysis.framesAnalyzed} frames</p>
                 )}

@@ -21,6 +21,14 @@ import type {
 const CAPTURE_INTERVAL_MS = 500;
 const CAPTURE_INTERVAL_S = CAPTURE_INTERVAL_MS / 1000;
 
+/** Minimum confidence to trust a motion direction from the backend */
+const MOTION_CONFIDENCE_THRESHOLD = 0.6;
+/**
+ * Number of consecutive frames that must agree on a non-stationary direction
+ * before the UI switches away from "stationary".  Prevents flickering.
+ */
+const MOTION_CONSENSUS_FRAMES = 3;
+
 export type ConnectionStatus = {
   isAnalyzing: boolean;
   isConnected: boolean;
@@ -87,11 +95,18 @@ export function LiveAnalysis({
     setIsSaving(true);
     setSaveError(null);
 
-    const overallScore = Math.min(...results.map((r) => r.peace_score.score));
+    const scores = results.map((r) => r.peace_score.score as number);
+    const overallScore = Math.min(...scores);
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+    const avgScore = Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 100) / 100;
 
     saveLiveAnalysis({
       filename: selectedFile?.name ?? "live-analysis",
       overallScore,
+      minScore,
+      maxScore,
+      avgScore,
       framesAnalyzed: results.length,
       duration: videoDuration > 0 ? videoDuration : null,
       timeline: results.map((r, i) => ({
@@ -130,8 +145,8 @@ export function LiveAnalysis({
   // Show the result whose actual capture time is closest to the current video time.
   // This keeps the score card, motion, and region in sync with the video position
   // during both live playback and post-analysis scrubbing.
-  const displayResult = useMemo(() => {
-    if (results.length === 0) return null;
+  const displayResultIdx = useMemo(() => {
+    if (results.length === 0) return -1;
     let bestIdx = 0;
     let bestDist = Math.abs((captureTimes[0] ?? 0) - currentVideoTime);
     for (let i = 1; i < results.length; i++) {
@@ -142,8 +157,49 @@ export function LiveAnalysis({
         bestDist = dist;
       }
     }
-    return results[bestIdx];
+    return bestIdx;
   }, [results, captureTimes, currentVideoTime]);
+
+  const displayResult = displayResultIdx >= 0 ? results[displayResultIdx] : null;
+
+  // Smooth the motion direction: require MOTION_CONSENSUS_FRAMES consecutive
+  // high-confidence frames agreeing on a non-stationary direction before
+  // switching away from "stationary". This prevents flickering.
+  const smoothedMotionDirection: MotionDirection | null = useMemo(() => {
+    if (displayResultIdx < 0) return null;
+
+    // Look at the window of frames ending at the current display frame
+    const windowStart = Math.max(0, displayResultIdx - MOTION_CONSENSUS_FRAMES + 1);
+    const window = results.slice(windowStart, displayResultIdx + 1);
+
+    // Count how many recent frames agree on each non-stationary direction
+    // with sufficient confidence
+    let consecutiveDir: MotionDirection | null = null;
+    let streak = 0;
+
+    for (const r of window) {
+      const dir = r.motion?.direction ?? "stationary";
+      const conf = r.motion?.confidence ?? 0;
+
+      if (dir !== "stationary" && conf >= MOTION_CONFIDENCE_THRESHOLD) {
+        if (dir === consecutiveDir) {
+          streak++;
+        } else {
+          consecutiveDir = dir;
+          streak = 1;
+        }
+      } else {
+        consecutiveDir = null;
+        streak = 0;
+      }
+    }
+
+    if (consecutiveDir && streak >= MOTION_CONSENSUS_FRAMES) {
+      return consecutiveDir;
+    }
+
+    return "stationary";
+  }, [results, displayResultIdx]);
 
 
   return (
@@ -187,7 +243,7 @@ export function LiveAnalysis({
               onTimeUpdate={setCurrentVideoTime}
               captureIntervalMs={CAPTURE_INTERVAL_MS}
               peaceScore={displayResult ? displayResult.peace_score.score as PeaceScore : null}
-              motionDirection={displayResult?.motion ? displayResult.motion.direction as MotionDirection : null}
+              motionDirection={smoothedMotionDirection}
               region={displayResult?.region || null}
             />
           ) : (
@@ -223,10 +279,12 @@ export function LiveAnalysis({
                 <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Motion
                 </p>
-                {displayResult.motion ? (
+                {smoothedMotionDirection && smoothedMotionDirection !== "stationary" ? (
                   <MotionVisual
-                    direction={displayResult.motion.direction as MotionDirection}
+                    direction={smoothedMotionDirection}
                   />
+                ) : displayResult.motion ? (
+                  <MotionVisual direction="stationary" />
                 ) : (
                   <p className="text-sm font-medium text-muted-foreground/30">—</p>
                 )}
