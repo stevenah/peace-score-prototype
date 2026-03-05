@@ -43,7 +43,14 @@ export function uploadVideo(
           reject(new ApiError(xhr.status, "Invalid JSON response"));
         }
       } else {
-        reject(new ApiError(xhr.status, xhr.responseText || "Upload failed"));
+        let message = "Upload failed";
+        try {
+          const data = JSON.parse(xhr.responseText);
+          message = data.message || data.error || message;
+        } catch {
+          message = xhr.responseText || message;
+        }
+        reject(new ApiError(xhr.status, message));
       }
     });
 

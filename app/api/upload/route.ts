@@ -36,6 +36,27 @@ export async function POST(request: NextRequest) {
     }
     userId = session.user.id;
 
+    // Quota check
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { uploadLimit: true, uploadCount: true },
+    });
+
+    if (
+      currentUser &&
+      currentUser.uploadLimit !== -1 &&
+      currentUser.uploadCount >= currentUser.uploadLimit
+    ) {
+      return NextResponse.json(
+        {
+          error: "Upload limit reached",
+          message: `You have reached your upload limit of ${currentUser.uploadLimit} analyses. Contact an administrator to increase your quota.`,
+          quotaExceeded: true,
+        },
+        { status: 429 },
+      );
+    }
+
     let formData: FormData;
     try {
       formData = await request.formData();
@@ -114,6 +135,11 @@ export async function POST(request: NextRequest) {
           status: "processing",
           videoPath,
         },
+      });
+
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { uploadCount: { increment: 1 } },
       });
     }
 

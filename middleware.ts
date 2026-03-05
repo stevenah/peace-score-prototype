@@ -14,6 +14,8 @@ export default auth((req) => {
   );
   const isAuthApi = pathname.startsWith("/api/auth");
   const isOtherApi = pathname.startsWith("/api/");
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminApi = pathname.startsWith("/api/admin");
 
   // Allow auth API routes
   if (isAuthApi) {
@@ -37,14 +39,23 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // API routes handle their own auth (return 401 JSON, not redirects)
-  if (isOtherApi) {
-    return NextResponse.next();
-  }
-
   // Redirect unauthenticated users to login
   if (!isLoggedIn) {
+    if (isOtherApi) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", req.nextUrl));
+  }
+
+  // Admin route protection
+  if (isAdminRoute || isAdminApi) {
+    const role = req.auth?.user?.role;
+    if (role !== "ADMIN") {
+      if (isAdminApi) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    }
   }
 
   return NextResponse.next();
