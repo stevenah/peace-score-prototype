@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import Hls from "hls.js";
 import { Play, Pause, RotateCcw, Maximize, Minimize, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatDuration } from "@/lib/utils";
@@ -13,7 +14,7 @@ export interface VideoStreamPlayerHandle {
 }
 
 interface VideoStreamPlayerProps {
-  file: File;
+  source: File | string;
   isAnalyzing: boolean;
   onFrameCapture: (blob: Blob, videoTime: number) => void;
   onPlayStateChange?: (playing: boolean) => void;
@@ -31,10 +32,12 @@ interface VideoStreamPlayerProps {
   region?: string | null;
   /** Extra content rendered at the right end of the controls bar */
   controlsRight?: React.ReactNode;
+  /** Hides scrub bar/duration and shows LIVE indicator */
+  isLiveStream?: boolean;
 }
 
 export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStreamPlayerProps>(function VideoStreamPlayer({
-  file,
+  source,
   isAnalyzing,
   onFrameCapture,
   onPlayStateChange,
@@ -47,6 +50,7 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   motionDirection,
   region,
   controlsRight,
+  isLiveStream = false,
 }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,7 +59,9 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const analyzedBucketsRef = useRef<Set<number>>(new Set());
   const syncPausedRef = useRef(false);
+  const hlsRef = useRef<Hls | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [corsError, setCorsError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -83,12 +89,48 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     },
   }), [onTimeUpdate, onPlayStateChange]);
 
-  // Create object URL for the file
+  // Resolve source to a playable URL (File blob, HLS, or direct URL)
   useEffect(() => {
-    const url = URL.createObjectURL(file);
+    const video = videoRef.current;
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (source instanceof File) {
+      const url = URL.createObjectURL(source);
+      setVideoUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+
+    // String URL
+    const url = source;
+    const isHls = url.includes(".m3u8");
+
+    if (isHls && Hls.isSupported() && video) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+      hlsRef.current = hls;
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setVideoUrl(url);
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          console.error("HLS fatal error:", data);
+        }
+      });
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    }
+
+    // Safari native HLS or direct URL
     setVideoUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [source]);
 
   // Frame capture interval
   useEffect(() => {
@@ -141,7 +183,13 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0);
+    try {
+      ctx.drawImage(video, 0, 0);
+    } catch {
+      // SecurityError from cross-origin stream without CORS headers
+      setCorsError(true);
+      return;
+    }
     // Snapshot the time now — toBlob is async and video.currentTime may advance
     const captureTime = video.currentTime;
     canvas.toBlob(
@@ -271,7 +319,8 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
         {videoUrl && (
           <video
             ref={videoRef}
-            src={videoUrl}
+            src={hlsRef.current ? undefined : videoUrl}
+            crossOrigin={typeof source === "string" ? "anonymous" : undefined}
             className={isFullscreen ? "h-full w-full object-contain" : "w-full"}
             style={isFullscreen ? undefined : { aspectRatio: "16/9" }}
             playsInline
@@ -314,6 +363,13 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
           <div className="absolute left-1/2 top-6 -translate-x-1/2 flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm animate-pulse">
             <AlertTriangle className="h-5 w-5" />
             <span className="text-sm font-semibold">Insufficient cleaning — retracting</span>
+          </div>
+        )}
+
+        {/* CORS error banner */}
+        {corsError && (
+          <div className="absolute left-1/2 bottom-6 -translate-x-1/2 rounded-lg bg-amber-600/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
+            <span className="text-sm font-medium">Cannot capture frames — stream blocked by CORS policy</span>
           </div>
         )}
 
@@ -362,16 +418,28 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
 
             {/* Bottom: time + progress */}
             <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent px-5 pb-4 pt-10">
-              <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-white/20">
-                <div
-                  className="h-full rounded-full bg-white/80 transition-[width] duration-100 ease-linear"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              {!isLiveStream && (
+                <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-full rounded-full bg-white/80 transition-[width] duration-100 ease-linear"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-white/70">
-                <span className="tabular-nums">
-                  {formatDuration(currentTime)} / {formatDuration(duration)}
-                </span>
+                {isLiveStream ? (
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                    </span>
+                    <span className="text-xs font-medium text-red-400">LIVE</span>
+                  </div>
+                ) : (
+                  <span className="tabular-nums">
+                    {formatDuration(currentTime)} / {formatDuration(duration)}
+                  </span>
+                )}
                 <span className="text-[10px] uppercase tracking-wider text-white/40">
                   Press F to exit · Space to play/pause
                 </span>
@@ -443,34 +511,48 @@ export const VideoStreamPlayer = forwardRef<VideoStreamPlayerHandle, VideoStream
               {currentTime > 0 && currentTime < duration ? "Resume" : "Play"}
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={handleRestart}>
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+          {!isLiveStream && (
+            <Button variant="ghost" size="sm" onClick={handleRestart}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          )}
 
-          <div
-            ref={scrubRef}
-            className="group relative flex-1 cursor-pointer py-1"
-            onMouseDown={handleScrubStart}
-          >
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full transition-[width] duration-100 ease-linear"
-                style={{
-                  width: `${progress}%`,
-                  backgroundColor: isAnalyzing ? "#3b82f6" : "#9ca3af",
-                }}
-              />
+          {isLiveStream ? (
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+              </span>
+              <span className="text-xs font-medium text-red-500">LIVE</span>
             </div>
-            {/* Scrub thumb */}
-            <div
-              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
-              style={{ left: `${progress}%` }}
-            />
-          </div>
+          ) : (
+            <>
+              <div
+                ref={scrubRef}
+                className="group relative flex-1 cursor-pointer py-1"
+                onMouseDown={handleScrubStart}
+              >
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-100 ease-linear"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: isAnalyzing ? "#3b82f6" : "#9ca3af",
+                    }}
+                  />
+                </div>
+                {/* Scrub thumb */}
+                <div
+                  className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
+                  style={{ left: `${progress}%` }}
+                />
+              </div>
 
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {formatDuration(currentTime)} / {formatDuration(duration)}
-          </span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {formatDuration(currentTime)} / {formatDuration(duration)}
+              </span>
+            </>
+          )}
 
           {controlsRight}
         </div>

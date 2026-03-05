@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Square } from "lucide-react";
 import { saveLiveAnalysis } from "@/lib/api-client";
 import { VideoUploader } from "@/components/video/VideoUploader";
 import { VideoStreamPlayer, type VideoStreamPlayerHandle } from "@/components/video/VideoStreamPlayer";
 import { MotionVisual } from "@/components/analysis/MotionVisual";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { RegionHighlight } from "@/components/scoring/RegionHighlight";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
@@ -53,6 +54,9 @@ export function LiveAnalysis({
 }) {
   const playerRef = useRef<VideoStreamPlayerHandle>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sourceMode, setSourceMode] = useState<"file" | "url">("file");
+  const [streamUrl, setStreamUrl] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   // Whether analysis is actively running (WS connected, frames being captured)
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
@@ -95,12 +99,38 @@ export function LiveAnalysis({
 
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
+    setSourceMode("file");
     setIsAnalyzing(true);
     setIsSaved(false);
     setIsSaving(false);
     setSaveError(null);
     setCaptureTimes([]);
   }, []);
+
+  const handleUrlSubmit = useCallback(() => {
+    const trimmed = streamUrl.trim();
+    if (!trimmed) return;
+
+    try {
+      const parsed = new URL(trimmed);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        setUrlError("URL must use HTTP or HTTPS protocol");
+        return;
+      }
+    } catch {
+      setUrlError("Please enter a valid URL");
+      return;
+    }
+
+    setUrlError(null);
+    setSelectedFile(null);
+    setSourceMode("url");
+    setIsAnalyzing(true);
+    setIsSaved(false);
+    setIsSaving(false);
+    setSaveError(null);
+    setCaptureTimes([]);
+  }, [streamUrl]);
 
   // Auto-save analysis when video ends
   const handleVideoEnd = useCallback(() => {
@@ -118,7 +148,7 @@ export function LiveAnalysis({
     const avgScore = Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 100) / 100;
 
     saveLiveAnalysis({
-      filename: selectedFile?.name ?? "live-analysis",
+      filename: selectedFile?.name ?? (streamUrl ? "live-stream" : "live-analysis"),
       overallScore,
       minScore,
       maxScore,
@@ -240,6 +270,13 @@ export function LiveAnalysis({
     playerRef.current?.pause();
   }, [results.length, displayResultIdx, captureTimes]);
 
+  const activeSource: File | string | null =
+    selectedFile ?? (streamUrl && isAnalyzing ? streamUrl : null);
+
+  const handleStopStream = useCallback(() => {
+    handleVideoEnd();
+  }, [handleVideoEnd]);
+
   const hasFrames = results.length > 0;
 
   const frameStepper = (
@@ -264,6 +301,15 @@ export function LiveAnalysis({
       >
         <ChevronRight className="h-3.5 w-3.5" />
       </button>
+      {sourceMode === "url" && isAnalyzing && (
+        <>
+          <span className="mx-1 h-4 w-px bg-border" />
+          <Button variant="secondary" size="sm" onClick={handleStopStream}>
+            <Square className="h-3 w-3" />
+            Stop
+          </Button>
+        </>
+      )}
     </div>
   );
 
@@ -272,10 +318,11 @@ export function LiveAnalysis({
       {/* Video + Live Scores */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
         <div className="lg:col-span-3">
-          {selectedFile ? (
+          {activeSource ? (
             <VideoStreamPlayer
               ref={playerRef}
-              file={selectedFile}
+              source={activeSource}
+              isLiveStream={sourceMode === "url"}
               isAnalyzing={isAnalyzing && isConnected}
               onFrameCapture={handleFrameCapture}
               onVideoEnd={handleVideoEnd}
@@ -289,7 +336,37 @@ export function LiveAnalysis({
               controlsRight={frameStepper}
             />
           ) : (
-            <VideoUploader onFilesSelect={(files) => handleFileSelect(files[0])} />
+            <div className="flex h-full flex-col gap-4">
+              <VideoUploader onFilesSelect={(files) => handleFileSelect(files[0])} />
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted-foreground">or paste a link</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => { e.preventDefault(); handleUrlSubmit(); }}
+              >
+                <input
+                  type="url"
+                  value={streamUrl}
+                  onChange={(e) => {
+                    setStreamUrl(e.target.value);
+                    setUrlError(null);
+                  }}
+                  placeholder="https://example.com/stream.m3u8"
+                  className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <Button type="submit" disabled={!streamUrl.trim()}>
+                  Start
+                </Button>
+              </form>
+              {urlError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{urlError}</p>
+              )}
+            </div>
           )}
         </div>
 
