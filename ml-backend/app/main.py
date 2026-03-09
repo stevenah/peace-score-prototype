@@ -13,11 +13,8 @@ from app.services.job_store import job_store
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_ORIGINS = set(settings.cors_origins)
-
-
 class CORSMiddleware:
-    """Pure ASGI middleware for CORS — handles preflight and regular requests."""
+    """Pure ASGI middleware — allow all origins."""
 
     def __init__(self, app):
         self.app = app
@@ -28,20 +25,18 @@ class CORSMiddleware:
             return
 
         headers = dict(scope.get("headers", []))
-        origin = headers.get(b"origin", b"").decode()
+        origin = headers.get(b"origin", b"*").decode()
         method = scope.get("method", "")
 
-        # Handle preflight OPTIONS requests
-        if method == "OPTIONS" and origin in ALLOWED_ORIGINS:
+        if method == "OPTIONS":
             request_headers = headers.get(
                 b"access-control-request-headers", b""
             ).decode()
             logger.info("CORS preflight from origin=%s headers=%s", origin, request_headers)
             response_headers = [
-                (b"access-control-allow-origin", origin.encode()),
+                (b"access-control-allow-origin", b"*"),
                 (b"access-control-allow-methods", b"GET, POST, PUT, DELETE, OPTIONS, PATCH"),
                 (b"access-control-allow-headers", request_headers.encode() if request_headers else b"*"),
-                (b"access-control-allow-credentials", b"true"),
                 (b"access-control-max-age", b"86400"),
                 (b"content-length", b"0"),
             ]
@@ -49,21 +44,16 @@ class CORSMiddleware:
             await send({"type": "http.response.body", "body": b""})
             return
 
-        # For non-preflight requests, add CORS headers to the response
-        if origin in ALLOWED_ORIGINS:
-            cors_headers = [
-                (b"access-control-allow-origin", origin.encode()),
-                (b"access-control-allow-credentials", b"true"),
-            ]
+        cors_headers = [
+            (b"access-control-allow-origin", b"*"),
+        ]
 
-            async def send_with_cors(message):
-                if message["type"] == "http.response.start":
-                    message["headers"] = list(message.get("headers", [])) + cors_headers
-                await send(message)
+        async def send_with_cors(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = list(message.get("headers", [])) + cors_headers
+            await send(message)
 
-            await self.app(scope, receive, send_with_cors)
-        else:
-            await self.app(scope, receive, send)
+        await self.app(scope, receive, send_with_cors)
 
 
 @asynccontextmanager
