@@ -13,7 +13,7 @@ const MIME_TYPES: Record<string, string> = {
   ".webm": "video/webm",
 };
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
 
 // Video magic bytes: ftyp (MP4/MOV), RIFF (AVI), 1A 45 DF A3 (MKV/WebM)
 function isValidVideoFile(header: Uint8Array): boolean {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_FILE_SIZE) {
       await releaseSlot(userId);
       await createFailedRecord(userId, filename);
-      return NextResponse.json({ error: "File too large (max 500MB)" }, { status: 413 });
+      return NextResponse.json({ error: "File too large (max 1GB)" }, { status: 413 });
     }
 
     // Validate file content via magic bytes
