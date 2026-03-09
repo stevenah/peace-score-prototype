@@ -3,18 +3,18 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json();
+  const { email, currentPassword, newPassword } = await request.json();
 
-  if (!email || !password) {
+  if (!email || !currentPassword || !newPassword) {
     return NextResponse.json(
-      { error: "Email and password are required" },
+      { error: "Email, current password, and new password are required" },
       { status: 400 },
     );
   }
 
-  if (password.length < 6) {
+  if (newPassword.length < 6) {
     return NextResponse.json(
-      { error: "Password must be at least 6 characters" },
+      { error: "New password must be at least 6 characters" },
       { status: 400 },
     );
   }
@@ -24,18 +24,19 @@ export async function POST(request: NextRequest) {
     select: { id: true, hashedPassword: true },
   });
 
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!user || !user.hashedPassword) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  if (user.hashedPassword) {
+  const isValid = await bcrypt.compare(currentPassword, user.hashedPassword);
+  if (!isValid) {
     return NextResponse.json(
-      { error: "Password is already set" },
-      { status: 400 },
+      { error: "Current password is incorrect" },
+      { status: 401 },
     );
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({
     where: { id: user.id },
     data: { hashedPassword, forcePasswordChange: false },

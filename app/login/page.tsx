@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Activity } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
-type Step = "login" | "set-password";
+type Step = "login" | "set-password" | "change-password";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,10 +35,29 @@ export default function LoginPage() {
       });
 
       if (checkRes.ok) {
-        const { needsPassword } = await checkRes.json();
+        const { needsPassword, forcePasswordChange } = await checkRes.json();
         if (needsPassword) {
           setIsLoading(false);
           setStep("set-password");
+          return;
+        }
+        if (forcePasswordChange) {
+          // Need to verify current password first, then redirect to change
+          const result = await signIn("credentials", {
+            email,
+            password,
+            redirect: false,
+          });
+
+          setIsLoading(false);
+
+          if (result?.error) {
+            setError("Invalid email or password");
+            return;
+          }
+
+          // Password is correct, now force them to change it
+          setStep("change-password");
           return;
         }
       }
@@ -57,8 +77,8 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       }
-    } else {
-      // Set password step
+    } else if (step === "set-password") {
+      // Set password step (for users with no password)
       if (password.length < 6) {
         setError("Password must be at least 6 characters");
         setIsLoading(false);
@@ -100,6 +120,36 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       }
+    } else if (step === "change-password") {
+      // Force change password step
+      if (newPassword.length < 6) {
+        setError("New password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError("Passwords do not match");
+        setIsLoading(false);
+        return;
+      }
+
+      const changeRes = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, currentPassword: password, newPassword }),
+      });
+
+      if (!changeRes.ok) {
+        const data = await changeRes.json();
+        setError(data.error || "Failed to change password");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(false);
+      router.push("/dashboard");
+      router.refresh();
     }
   }
 
@@ -111,11 +161,18 @@ export default function LoginPage() {
           <h1 className="mt-4 text-2xl font-bold text-foreground">
             {step === "login"
               ? "Sign in to PEACE Analyzer"
-              : "Set Your Password"}
+              : step === "set-password"
+                ? "Set Your Password"
+                : "Change Your Password"}
           </h1>
           {step === "set-password" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Your account requires a password. Please create one to continue.
+            </p>
+          )}
+          {step === "change-password" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              An administrator has required you to change your password.
             </p>
           )}
         </div>
@@ -127,47 +184,72 @@ export default function LoginPage() {
             </p>
           )}
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-foreground/80"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={step === "set-password"}
-              className={`${inputClass} ${step === "set-password" ? "opacity-60" : ""}`}
-              placeholder="you@example.com"
-            />
-          </div>
+          {step !== "change-password" && (
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-foreground/80"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={step === "set-password"}
+                className={`${inputClass} ${step === "set-password" ? "opacity-60" : ""}`}
+                placeholder="you@example.com"
+              />
+            </div>
+          )}
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-foreground/80"
-            >
-              {step === "login" ? "Password" : "New Password"}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required={step === "set-password"}
-              minLength={step === "set-password" ? 6 : undefined}
-              className={inputClass}
-              placeholder={
-                step === "login" ? "••••••••" : "Min 6 characters"
-              }
-            />
-          </div>
+          {step !== "change-password" && (
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-foreground/80"
+              >
+                {step === "login" ? "Password" : "New Password"}
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required={step === "set-password"}
+                minLength={step === "set-password" ? 6 : undefined}
+                className={inputClass}
+                placeholder={
+                  step === "login" ? "••••••••" : "Min 6 characters"
+                }
+              />
+            </div>
+          )}
 
-          {step === "set-password" && (
+          {step === "change-password" && (
+            <div>
+              <label
+                htmlFor="new-password"
+                className="block text-sm font-medium text-foreground/80"
+              >
+                New Password
+              </label>
+              <input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className={inputClass}
+                placeholder="Min 6 characters"
+              />
+            </div>
+          )}
+
+          {(step === "set-password" || step === "change-password") && (
             <div>
               <label
                 htmlFor="confirm-password"
@@ -192,10 +274,14 @@ export default function LoginPage() {
             {isLoading
               ? step === "login"
                 ? "Signing in..."
-                : "Setting password..."
+                : step === "change-password"
+                  ? "Changing password..."
+                  : "Setting password..."
               : step === "login"
                 ? "Sign in"
-                : "Set Password & Sign in"}
+                : step === "change-password"
+                  ? "Change Password"
+                  : "Set Password & Sign in"}
           </Button>
 
           {step === "set-password" && (

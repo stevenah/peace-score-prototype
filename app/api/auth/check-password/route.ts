@@ -13,12 +13,15 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { hashedPassword: true },
+    select: { hashedPassword: true, forcePasswordChange: true },
   });
 
   if (!user) {
-    return NextResponse.json({ needsPassword: false });
+    return NextResponse.json({ needsPassword: false, forcePasswordChange: false });
   }
 
-  return NextResponse.json({ needsPassword: !user.hashedPassword });
+  return NextResponse.json({
+    needsPassword: !user.hashedPassword,
+    forcePasswordChange: user.forcePasswordChange,
+  });
 }
