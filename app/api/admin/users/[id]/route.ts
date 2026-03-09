@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(
@@ -87,6 +88,11 @@ export async function PATCH(
     );
   }
 
+  const existingUser = await prisma.user.findUnique({
+    where: { id },
+    select: { email: true, name: true, role: true, uploadLimit: true, uploadCount: true },
+  });
+
   const user = await prisma.user.update({
     where: { id },
     data: updateData,
@@ -99,6 +105,63 @@ export async function PATCH(
       uploadCount: true,
     },
   });
+
+  // Audit logging for specific change types
+  if (body.uploadCount === 0) {
+    logAudit({
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "UPLOAD_COUNT_RESET",
+      targetType: "User",
+      targetId: id,
+      targetLabel: existingUser?.email ?? user.email,
+      details: { previousCount: existingUser?.uploadCount },
+    });
+  }
+
+  if (body.role !== undefined && body.role !== existingUser?.role) {
+    logAudit({
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "ROLE_CHANGED",
+      targetType: "User",
+      targetId: id,
+      targetLabel: user.email,
+      details: { from: existingUser?.role, to: body.role },
+    });
+  }
+
+  if (body.password !== undefined) {
+    logAudit({
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "PASSWORD_RESET",
+      targetType: "User",
+      targetId: id,
+      targetLabel: user.email,
+    });
+  }
+
+  // General update log for name/email/limit changes
+  const generalChanges: Record<string, unknown> = {};
+  if (body.name !== undefined && body.name !== existingUser?.name)
+    generalChanges.name = { from: existingUser?.name, to: body.name || null };
+  if (body.email !== undefined && body.email !== existingUser?.email)
+    generalChanges.email = { from: existingUser?.email, to: body.email };
+  if (body.uploadLimit !== undefined && body.uploadLimit !== existingUser?.uploadLimit)
+    generalChanges.uploadLimit = { from: existingUser?.uploadLimit, to: body.uploadLimit };
+
+  if (Object.keys(generalChanges).length > 0) {
+    logAudit({
+      actorId: session.user.id,
+      actorEmail: session.user.email,
+      action: "USER_UPDATED",
+      targetType: "User",
+      targetId: id,
+      targetLabel: user.email,
+      details: generalChanges,
+    });
+  }
 
   return NextResponse.json({ user });
 }
@@ -127,6 +190,16 @@ export async function DELETE(
   }
 
   await prisma.user.delete({ where: { id } });
+
+  logAudit({
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    action: "USER_DELETED",
+    targetType: "User",
+    targetId: id,
+    targetLabel: user.email,
+    details: { name: user.name, role: user.role },
+  });
 
   return NextResponse.json({ success: true });
 }

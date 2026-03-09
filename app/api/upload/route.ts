@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ML_BACKEND_URL } from "@/lib/constants";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import { uploadVideo } from "@/lib/s3";
 
 const MIME_TYPES: Record<string, string> = {
@@ -176,6 +177,17 @@ export async function POST(request: NextRequest) {
           status: "processing",
           videoPath,
         },
+      });
+    }
+
+    if (data.analysis_id) {
+      logAudit({
+        actorId: session.user.id,
+        actorEmail: session.user.email ?? null,
+        action: "VIDEO_UPLOADED",
+        targetType: "AnalysisSession",
+        targetId: data.analysis_id,
+        targetLabel: filename,
       });
     }
 

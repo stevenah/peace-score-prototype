@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Progress";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Tabs } from "@/components/ui/Tabs";
+import AuditLogPanel from "./AuditLogPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +41,7 @@ const labelClass = "block text-sm font-medium text-foreground/80";
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -241,16 +244,34 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold tracking-tight">
             Admin Dashboard
           </h1>
-          <Badge className="text-xs bg-muted text-muted-foreground">
-            {users.length} user{users.length !== 1 ? "s" : ""}
-          </Badge>
+          {activeTab === "users" && (
+            <Badge className="text-xs bg-muted text-muted-foreground">
+              {users.length} user{users.length !== 1 ? "s" : ""}
+            </Badge>
+          )}
         </div>
-        <Button onClick={() => setShowAddUser(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        {activeTab === "users" && (
+          <Button onClick={() => setShowAddUser(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        )}
       </div>
 
+      {/* Tabs */}
+      <Tabs
+        tabs={[
+          { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
+          { id: "audit", label: "Audit Log", icon: <ClipboardList className="h-4 w-4" /> },
+        ]}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === "audit" ? (
+        <AuditLogPanel />
+      ) : (
+      <>
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -662,6 +683,8 @@ export default function AdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </>
+      )}
     </div>
   );
 }

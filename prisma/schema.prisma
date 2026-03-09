@@ -42,3 +42,20 @@ model AnalysisSession {
   @@index([userId])
   @@index([status])
 }
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  actorId     String?
+  actorEmail  String?
+  action      String
+  targetType  String
+  targetId    String?
+  targetLabel String?
+  details     String?
+  ipAddress   String?
+
+  @@index([timestamp])
+  @@index([actorId])
+  @@index([action])
+}

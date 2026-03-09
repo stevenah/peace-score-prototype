@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { logAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 
 export async function GET(request: NextRequest) {
@@ -77,6 +78,16 @@ export async function POST(request: NextRequest) {
       uploadLimit: typeof uploadLimit === "number" ? uploadLimit : 10,
       forcePasswordChange: forcePasswordChange === true,
     },
+  });
+
+  logAudit({
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    action: "USER_CREATED",
+    targetType: "User",
+    targetId: user.id,
+    targetLabel: user.email,
+    details: { role: user.role, uploadLimit: typeof uploadLimit === "number" ? uploadLimit : 10 },
   });
 
   return NextResponse.json(
