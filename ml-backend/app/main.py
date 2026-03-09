@@ -59,10 +59,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# PreflightMiddleware runs first (added last = outermost) to catch OPTIONS
-# before CORSMiddleware or route handlers can reject them
-app.add_middleware(PreflightMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -70,6 +66,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Added last = outermost = runs first — catches OPTIONS preflight
+# before CORSMiddleware or route handlers can reject them
+app.add_middleware(PreflightMiddleware)
 
 app.include_router(api_router)
 app.include_router(ws_router)
