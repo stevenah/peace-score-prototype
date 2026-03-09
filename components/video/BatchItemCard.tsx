@@ -79,6 +79,22 @@ export const BatchItemCard = memo(function BatchItemCard({
     item.status === "completed" ||
     item.status === "failed";
 
+  // Upload-phase detail: show uploaded / total + percentage
+  const uploadFraction =
+    item.status === "uploading" ? item.progress / 0.4 : 0; // UPLOAD_WEIGHT = 0.4
+  const uploadedBytes = Math.round(uploadFraction * item.file.size);
+  const uploadPct = Math.round(uploadFraction * 100);
+
+  // Status detail text
+  const detailText =
+    item.status === "uploading"
+      ? `${formatFileSize(uploadedBytes)} / ${formatFileSize(item.file.size)} (${uploadPct}%)`
+      : item.status === "queued"
+        ? "Waiting for processing..."
+        : item.status === "processing"
+          ? `Analyzing — ${Math.round(item.progress * 100)}%`
+          : null;
+
   return (
     <Card className="flex items-center gap-4 px-4 py-3">
       {/* File info */}
@@ -88,6 +104,9 @@ export const BatchItemCard = memo(function BatchItemCard({
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{formatFileSize(item.file.size)}</span>
+          {detailText && (
+            <span className="text-muted-foreground/70">{detailText}</span>
+          )}
           {item.error && (
             <span
               className="truncate text-red-600 dark:text-red-400"
@@ -101,7 +120,7 @@ export const BatchItemCard = memo(function BatchItemCard({
 
       {/* Progress bar for active states */}
       {isActive && (
-        <div className="w-24">
+        <div className="w-32">
           <Progress value={item.progress * 100} />
         </div>
       )}
