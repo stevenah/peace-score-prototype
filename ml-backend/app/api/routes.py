@@ -10,7 +10,7 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from PIL import Image
 
 from app.api.schemas import (
@@ -113,6 +113,33 @@ async def analyze_video(
 
     job_id = job_store.create_job(file_path)
 
+    job = job_store.get_job(job_id)
+    return {
+        "analysis_id": job_id,
+        "status": "queued",
+        "estimated_duration_seconds": 30,
+        "created_at": job["created_at"] if job else "",
+    }
+
+
+@router.post("/analyze/video/stream")
+async def analyze_video_stream(request: Request):
+    """Accept a raw binary video stream (no multipart). Used by chunked upload."""
+    filename = request.headers.get("x-filename", "upload.mp4")
+    allowed_extensions = {".mp4", ".avi", ".mov", ".mkv"}
+    ext = filename[filename.rfind("."):].lower() if "." in filename else ""
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
+
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
+
+    with open(file_path, "wb") as f:
+        async for chunk in request.stream():
+            f.write(chunk)
+
+    job_id = job_store.create_job(file_path)
     job = job_store.get_job(job_id)
     return {
         "analysis_id": job_id,

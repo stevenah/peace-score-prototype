@@ -1,6 +1,7 @@
 import type { AnalysisResponse, FrameAnalysisResponse } from "./types";
 
 const API_BASE = "/api";
+const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB per chunk
 
 class ApiError extends Error {
   constructor(
@@ -24,50 +25,81 @@ export function uploadVideo(
   file: File,
   onProgress?: (fraction: number) => void,
 ): { promise: Promise<{ analysis_id: string }>; abort: () => void } {
-  const xhr = new XMLHttpRequest();
+  const controller = new AbortController();
 
-  const promise = new Promise<{ analysis_id: string }>((resolve, reject) => {
-    xhr.open("POST", `${API_BASE}/upload`);
-
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable && onProgress) {
-        onProgress(e.loaded / e.total);
-      }
+  const promise = (async (): Promise<{ analysis_id: string }> => {
+    // Step 1: Initialize upload (auth + quota check)
+    const initRes = await fetch(`${API_BASE}/upload/init`, {
+      method: "POST",
+      signal: controller.signal,
     });
 
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
+    if (!initRes.ok) {
+      let message = "Upload initialization failed";
+      try {
+        const data = await initRes.json();
+        message = data.message || data.error || message;
+      } catch {}
+      throw new ApiError(initRes.status, message);
+    }
+
+    const { uploadId } = await initRes.json();
+
+    // Step 2: Send file in chunks
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let lastResult: { analysis_id: string } | null = null;
+
+    for (let i = 0; i < totalChunks; i++) {
+      if (controller.signal.aborted) {
+        throw new ApiError(0, "Upload aborted");
+      }
+
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const chunkRes = await fetch(`${API_BASE}/upload/chunk`, {
+        method: "POST",
+        headers: {
+          "x-upload-id": uploadId,
+          "x-chunk-index": String(i),
+          "x-total-chunks": String(totalChunks),
+          "x-filename": file.name,
+        },
+        body: chunk,
+        signal: controller.signal,
+      });
+
+      if (!chunkRes.ok) {
+        let message = "Chunk upload failed";
         try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch {
-          reject(new ApiError(xhr.status, "Invalid JSON response"));
-        }
-      } else {
-        let message = "Upload failed";
-        try {
-          const data = JSON.parse(xhr.responseText);
+          const data = await chunkRes.json();
           message = data.message || data.error || message;
-        } catch {
-          message = xhr.responseText || message;
-        }
-        reject(new ApiError(xhr.status, message));
+        } catch {}
+        throw new ApiError(chunkRes.status, message);
       }
-    });
 
-    xhr.addEventListener("error", () => {
-      reject(new ApiError(0, "Network error during upload"));
-    });
+      const chunkData = await chunkRes.json();
 
-    xhr.addEventListener("abort", () => {
-      reject(new ApiError(0, "Upload aborted"));
-    });
+      // Report progress after each chunk
+      if (onProgress) {
+        onProgress((i + 1) / totalChunks);
+      }
 
-    const formData = new FormData();
-    formData.append("file", file);
-    xhr.send(formData);
-  });
+      // Last chunk returns the analysis result
+      if (chunkData.analysis_id) {
+        lastResult = chunkData;
+      }
+    }
 
-  return { promise, abort: () => xhr.abort() };
+    if (!lastResult) {
+      throw new ApiError(0, "Upload completed but no analysis ID received");
+    }
+
+    return lastResult;
+  })();
+
+  return { promise, abort: () => controller.abort() };
 }
 
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {
