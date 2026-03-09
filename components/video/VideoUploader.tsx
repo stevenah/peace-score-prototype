@@ -108,7 +108,7 @@ export function VideoUploader({
           {isDragOver ? "Drop videos here" : "Drag & drop endoscopy videos"}
         </p>
         <p className="text-xs text-muted-foreground">
-          MP4, MOV, AVI, MKV up to 500MB each
+          MP4, MOV, AVI, MKV up to 1GB each
         </p>
         <input
           ref={inputRef}

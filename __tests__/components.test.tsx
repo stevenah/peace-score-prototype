@@ -123,7 +123,7 @@ describe("VideoUploader", () => {
     const input = document.querySelector("input[type='file']") as HTMLInputElement;
     // Create a file object with a large size
     const largeFile = new File(["x"], "big.mp4", { type: "video/mp4" });
-    Object.defineProperty(largeFile, "size", { value: 600 * 1024 * 1024 });
+    Object.defineProperty(largeFile, "size", { value: 1200 * 1024 * 1024 });
     fireEvent.change(input, { target: { files: [largeFile] } });
 
     // Should not call onFilesSelect with the invalid file

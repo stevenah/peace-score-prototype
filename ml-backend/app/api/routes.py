@@ -107,9 +107,9 @@ async def analyze_video(
     file_id = str(uuid.uuid4())
     file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
 
-    content = await file.read()
     with open(file_path, "wb") as f:
-        f.write(content)
+        while chunk := await file.read(8 * 1024 * 1024):  # 8MB chunks
+            f.write(chunk)
 
     job_id = job_store.create_job(file_path)
 
