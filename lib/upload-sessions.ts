@@ -13,19 +13,32 @@ interface UploadSession {
   createdAt: number;
 }
 
-const sessions = new Map<string, UploadSession>();
+// Store sessions on globalThis so they survive Next.js module re-evaluation
+// (hot reload in dev, route handler re-imports, etc.)
+const GLOBAL_KEY = "__peace_upload_sessions" as const;
+const g = globalThis as typeof globalThis & {
+  [GLOBAL_KEY]?: Map<string, UploadSession>;
+  __peace_upload_cleanup?: ReturnType<typeof setInterval>;
+};
 
-// Clean up stale sessions every 10 minutes
+if (!g[GLOBAL_KEY]) {
+  g[GLOBAL_KEY] = new Map();
+}
+const sessions = g[GLOBAL_KEY];
+
+// Clean up stale sessions every 10 minutes (only one interval)
 const STALE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, session] of sessions) {
-    if (now - session.createdAt > STALE_TIMEOUT) {
-      cleanupSession(id, session);
+if (!g.__peace_upload_cleanup) {
+  g.__peace_upload_cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (now - session.createdAt > STALE_TIMEOUT) {
+        cleanupSession(id, session);
+      }
     }
-  }
-}, 10 * 60 * 1000);
+  }, 10 * 60 * 1000);
+}
 
 const UPLOAD_DIR = join(tmpdir(), "peace-chunked-uploads");
 mkdirSync(UPLOAD_DIR, { recursive: true });
