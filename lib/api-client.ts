@@ -3,10 +3,23 @@ import type { AnalysisResponse, FrameAnalysisResponse } from "./types";
 const API_BASE = "/api";
 const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB per chunk
 
-// ML backend URL for direct chunk uploads (bypasses Next.js proxy)
-const ML_BACKEND_URL =
-  process.env.NEXT_PUBLIC_ML_BACKEND_URL ||
-  (typeof window !== "undefined" ? "" : "");
+// ML backend URL for direct chunk uploads (bypasses Next.js proxy).
+// NEXT_PUBLIC_ vars are baked at build time. If missing, derive from hostname.
+function getMLBackendUrl(): string {
+  if (process.env.NEXT_PUBLIC_ML_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_ML_BACKEND_URL;
+  }
+  if (typeof window !== "undefined") {
+    // Production: demo.gipeace.com → peace-ml.fly.dev
+    if (window.location.hostname === "demo.gipeace.com" ||
+        window.location.hostname === "peace-frontend.fly.dev") {
+      return "https://peace-ml.fly.dev";
+    }
+  }
+  return ""; // Local dev — falls back to /ml-api/ rewrite proxy
+}
+
+const ML_BACKEND_URL = getMLBackendUrl();
 
 class ApiError extends Error {
   constructor(
