@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { uploadVideo } from "@/lib/s3";
 
+export const maxDuration = 300; // 5 minutes for large uploads
+export const bodySizeLimit = "1gb";
+
 const MIME_TYPES: Record<string, string> = {
   ".mp4": "video/mp4",
   ".mov": "video/quicktime",
