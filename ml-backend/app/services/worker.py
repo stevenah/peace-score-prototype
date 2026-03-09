@@ -10,6 +10,7 @@ from app.config import settings
 from app.ml.frame_sampler import extract_frames
 from app.ml.pipeline import create_pipeline
 from app.services.job_store import JobStore
+from app.services.s3 import upload_video_to_s3
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,15 @@ class AnalysisWorker:
             self._job_store.fail_job(job_id, str(e))
 
         finally:
-            # Clean up uploaded file only on final completion or exhausted retries
             job_after = self._job_store.get_job(job_id)
             if job_after and job_after["status"] in ("completed", "failed"):
+                # Upload video to S3 before deleting local file
+                if job_after["status"] == "completed":
+                    ext = os.path.splitext(file_path)[1] or ".mp4"
+                    s3_key = f"videos/{job_id}{ext}"
+                    if upload_video_to_s3(file_path, s3_key):
+                        self._job_store.set_video_path(job_id, s3_key)
+
                 try:
                     os.remove(file_path)
                 except OSError:

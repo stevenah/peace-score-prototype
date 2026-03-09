@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { stat, open } from "fs/promises";
-import { Readable } from "stream";
-import path from "path";
+import { getPresignedUrl } from "@/lib/s3";
 
 export const runtime = "nodejs";
-
-const ALLOWED_VIDEO_DIR = path.resolve(process.cwd(), "uploads");
 
 export async function GET(
   request: NextRequest,
@@ -24,8 +20,8 @@ export async function GET(
     where: { analysisId },
   });
 
-  if (!session?.videoPath) {
-    return NextResponse.json({ error: "Video not found" }, { status: 404 });
+  if (!session) {
+    return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
 
   // Verify ownership
@@ -33,64 +29,37 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Prevent path traversal
-  const filePath = path.resolve(process.cwd(), session.videoPath);
-  if (!filePath.startsWith(ALLOWED_VIDEO_DIR)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // videoPath stores the S3 key (e.g. "videos/<job_id>.mp4")
+  if (!session.videoPath) {
+    // Video may not have been uploaded to S3 yet — try fetching from ML backend
+    const mlUrl = process.env.ML_BACKEND_URL || "http://localhost:8000";
+    try {
+      const res = await fetch(`${mlUrl}/api/v1/analyze/${analysisId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.video_path) {
+          // Persist the S3 key so we don't have to ask again
+          await prisma.analysisSession.update({
+            where: { analysisId },
+            data: { videoPath: data.video_path },
+          });
+          const url = await getPresignedUrl(data.video_path);
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch {
+      // ML backend unreachable — fall through to 404
+    }
+    return NextResponse.json({ error: "Video not available yet" }, { status: 404 });
   }
 
   try {
-    const stats = await stat(filePath);
-    const fileSize = stats.size;
-    const range = request.headers.get("range");
-
-    const ext = path.extname(filePath).toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      ".mp4": "video/mp4",
-      ".mov": "video/quicktime",
-      ".avi": "video/x-msvideo",
-      ".mkv": "video/x-matroska",
-      ".webm": "video/webm",
-    };
-    const contentType = mimeTypes[ext] || "video/mp4";
-
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = end - start + 1;
-
-      const fileHandle = await open(filePath, "r");
-      const nodeStream = fileHandle.createReadStream({ start, end });
-      const webStream = Readable.toWeb(nodeStream) as ReadableStream;
-
-      return new Response(webStream, {
-        status: 206,
-        headers: {
-          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": String(chunkSize),
-          "Content-Type": contentType,
-        },
-      });
-    }
-
-    const fileHandle = await open(filePath, "r");
-    const nodeStream = fileHandle.createReadStream();
-    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
-
-    return new Response(webStream, {
-      status: 200,
-      headers: {
-        "Content-Length": String(fileSize),
-        "Content-Type": contentType,
-        "Accept-Ranges": "bytes",
-      },
-    });
+    const url = await getPresignedUrl(session.videoPath);
+    return NextResponse.redirect(url);
   } catch {
     return NextResponse.json(
-      { error: "Video file not accessible" },
-      { status: 404 },
+      { error: "Failed to generate video URL" },
+      { status: 500 },
     );
   }
 }

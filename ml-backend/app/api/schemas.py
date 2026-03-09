@@ -123,6 +123,7 @@ class AnalysisResponse(BaseModel):
     progress: float = 0.0
     video_metadata: Optional[VideoMetadata] = None
     results: Optional[AnalysisResults] = None
+    video_path: Optional[str] = None
     created_at: str
     completed_at: Optional[str] = None
     error: Optional[str] = None

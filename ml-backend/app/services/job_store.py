@@ -48,6 +48,7 @@ class JobStore:
                 status TEXT NOT NULL DEFAULT 'queued',
                 progress REAL NOT NULL DEFAULT 0.0,
                 file_path TEXT,
+                video_path TEXT,
                 video_metadata TEXT,
                 results TEXT,
                 error TEXT,
@@ -60,6 +61,12 @@ class JobStore:
             )
         """)
         conn.commit()
+        # Migrate existing DBs that lack the video_path column
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN video_path TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
 
     def create_job(self, file_path: str) -> str:
         """Insert a new job and return its ID."""
@@ -159,6 +166,15 @@ class JobStore:
         )
         conn.commit()
 
+    def set_video_path(self, job_id: str, s3_key: str) -> None:
+        """Store the S3 key for the uploaded video."""
+        conn = self._get_connection()
+        conn.execute(
+            "UPDATE jobs SET video_path = ?, updated_at = ? WHERE id = ?",
+            (s3_key, _now_iso(), job_id),
+        )
+        conn.commit()
+
     def recover_stale_jobs(self) -> int:
         """Reset jobs stuck in 'processing' back to 'queued' (crash recovery)."""
         now = _now_iso()
@@ -182,6 +198,7 @@ class JobStore:
             if row["video_metadata"]
             else None,
             "results": json.loads(row["results"]) if row["results"] else None,
+            "video_path": row["video_path"] if "video_path" in row.keys() else None,
             "created_at": row["created_at"],
             "completed_at": row["completed_at"],
             "error": row["error"],

@@ -122,22 +122,67 @@ async def analyze_video(
     }
 
 
-@router.post("/analyze/video/stream")
-async def analyze_video_stream(request: Request):
-    """Accept a raw binary video stream (no multipart). Used by chunked upload."""
+# --- Chunked upload: clients send 8MB pieces directly to the ML backend ---
+
+# In-memory registry of active chunked uploads.
+# Key = upload_id, value = { path, chunks_received, total_chunks }
+_chunked_uploads: dict[str, dict] = {}
+
+
+@router.post("/upload/chunk")
+async def receive_chunk(request: Request):
+    """Receive a single chunk of a chunked upload.
+
+    Headers:
+      x-upload-id   – identifier returned by the frontend /api/upload/init
+      x-chunk-index – 0-based index of this chunk
+      x-total-chunks – total number of chunks for the file
+      x-filename     – original filename (used on last chunk)
+    """
+    upload_id = request.headers.get("x-upload-id", "")
+    chunk_index = int(request.headers.get("x-chunk-index", "0"))
+    total_chunks = int(request.headers.get("x-total-chunks", "1"))
     filename = request.headers.get("x-filename", "upload.mp4")
+
+    if not upload_id:
+        raise HTTPException(status_code=400, detail="Missing x-upload-id header")
+
+    os.makedirs(settings.upload_dir, exist_ok=True)
+
+    # First chunk initialises the upload entry
+    if upload_id not in _chunked_uploads:
+        file_path = os.path.join(settings.upload_dir, f"{upload_id}.mp4")
+        _chunked_uploads[upload_id] = {
+            "path": file_path,
+            "chunks_received": 0,
+            "total_chunks": total_chunks,
+        }
+
+    entry = _chunked_uploads[upload_id]
+    body = await request.body()
+
+    # Append chunk to file on disk
+    with open(entry["path"], "ab") as f:
+        f.write(body)
+
+    entry["chunks_received"] += 1
+
+    # Not done yet — acknowledge and wait for more chunks
+    if entry["chunks_received"] < entry["total_chunks"]:
+        return {"ok": True, "chunksReceived": entry["chunks_received"]}
+
+    # All chunks received — create the analysis job
+    file_path = entry["path"]
+    del _chunked_uploads[upload_id]
+
     allowed_extensions = {".mp4", ".avi", ".mov", ".mkv"}
     ext = filename[filename.rfind("."):].lower() if "." in filename else ""
     if ext not in allowed_extensions:
+        try:
+            os.unlink(file_path)
+        except OSError:
+            pass
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
-
-    os.makedirs(settings.upload_dir, exist_ok=True)
-    file_id = str(uuid.uuid4())
-    file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
-
-    with open(file_path, "wb") as f:
-        async for chunk in request.stream():
-            f.write(chunk)
 
     job_id = job_store.create_job(file_path)
     job = job_store.get_job(job_id)

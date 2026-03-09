@@ -3,6 +3,11 @@ import type { AnalysisResponse, FrameAnalysisResponse } from "./types";
 const API_BASE = "/api";
 const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB per chunk
 
+// ML backend URL for direct chunk uploads (bypasses Next.js proxy)
+const ML_BACKEND_URL =
+  process.env.NEXT_PUBLIC_ML_BACKEND_URL ||
+  (typeof window !== "undefined" ? "" : "");
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -28,7 +33,7 @@ export function uploadVideo(
   const controller = new AbortController();
 
   const promise = (async (): Promise<{ analysis_id: string }> => {
-    // Step 1: Initialize upload (auth + quota check)
+    // Step 1: Initialize upload via Next.js (auth + quota check)
     const initRes = await fetch(`${API_BASE}/upload/init`, {
       method: "POST",
       signal: controller.signal,
@@ -45,7 +50,12 @@ export function uploadVideo(
 
     const { uploadId } = await initRes.json();
 
-    // Step 2: Send file in chunks
+    // Step 2: Send chunks directly to ML backend (bypasses Next.js)
+    // This avoids Next.js body size limits and keeps the 512MB frontend lean.
+    const chunkUrl = ML_BACKEND_URL
+      ? `${ML_BACKEND_URL}/api/v1/upload/chunk`
+      : `/ml-api/upload/chunk`; // fallback to Next.js rewrite proxy for local dev
+
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     let lastResult: { analysis_id: string } | null = null;
 
@@ -58,7 +68,7 @@ export function uploadVideo(
       const end = Math.min(start + CHUNK_SIZE, file.size);
       const chunk = file.slice(start, end);
 
-      const chunkRes = await fetch(`${API_BASE}/upload/chunk`, {
+      const chunkRes = await fetch(chunkUrl, {
         method: "POST",
         headers: {
           "x-upload-id": uploadId,
@@ -94,6 +104,23 @@ export function uploadVideo(
 
     if (!lastResult) {
       throw new ApiError(0, "Upload completed but no analysis ID received");
+    }
+
+    // Step 3: Register the analysis in the Next.js DB
+    const completeRes = await fetch(`${API_BASE}/upload/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        uploadId,
+        analysisId: lastResult.analysis_id,
+        filename: file.name,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!completeRes.ok) {
+      // Non-fatal — analysis still runs, just may not show in dashboard
+      console.error("Failed to register analysis:", await completeRes.text().catch(() => ""));
     }
 
     return lastResult;
