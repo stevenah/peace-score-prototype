@@ -1,4 +1,8 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  HeadObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let _client: S3Client | null = null;
@@ -26,4 +30,26 @@ export async function getPresignedUrl(key: string, expiresIn = 3600) {
     new GetObjectCommand({ Bucket: bucket, Key: key }),
     { expiresIn },
   );
+}
+
+export async function getObjectStream(key: string, range?: string) {
+  const bucket = process.env.S3_BUCKET_NAME;
+  if (!bucket) {
+    throw new Error("S3_BUCKET_NAME not configured");
+  }
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ...(range ? { Range: range } : {}),
+  });
+  return getClient().send(command);
+}
+
+export async function getObjectHead(key: string) {
+  const bucket = process.env.S3_BUCKET_NAME;
+  if (!bucket) {
+    throw new Error("S3_BUCKET_NAME not configured");
+  }
+  const command = new HeadObjectCommand({ Bucket: bucket, Key: key });
+  return getClient().send(command);
 }

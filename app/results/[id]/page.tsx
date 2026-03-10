@@ -35,6 +35,7 @@ export default function ResultsPage({
 
   const results = analysis?.results;
   const hasVideo = !!analysis?.video_url;
+  const videoSrc = hasVideo ? `/api/video/${id}` : undefined;
   const totalDuration = results?.timeline?.length
     ? results.timeline[results.timeline.length - 1].timestamp
     : 0;
@@ -131,7 +132,7 @@ export default function ResultsPage({
               {hasVideo ? (
                 <VideoPlaybackPlayer
                   ref={playerRef}
-                  src={analysis.video_url!}
+                  src={videoSrc!}
                   onTimeUpdate={setReplayTime}
                   peaceScore={
                     activeEntry

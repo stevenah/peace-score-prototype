@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getPresignedUrl } from "@/lib/s3";
+import { getObjectStream } from "@/lib/s3";
 
 export const runtime = "nodejs";
 
@@ -24,41 +24,70 @@ export async function GET(
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
 
-  // Verify ownership
   if (session.userId !== authSession.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // videoPath stores the S3 key (e.g. "videos/<job_id>.mp4")
-  if (!session.videoPath) {
-    // Video may not have been uploaded to S3 yet — try fetching from ML backend
+  let videoPath = session.videoPath;
+
+  if (!videoPath) {
     const mlUrl = process.env.ML_BACKEND_URL || "http://localhost:8000";
     try {
       const res = await fetch(`${mlUrl}/api/v1/analyze/${analysisId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.video_path) {
-          // Persist the S3 key so we don't have to ask again
           await prisma.analysisSession.update({
             where: { analysisId },
             data: { videoPath: data.video_path },
           });
-          const url = await getPresignedUrl(data.video_path);
-          return NextResponse.redirect(url);
+          videoPath = data.video_path;
         }
       }
     } catch {
-      // ML backend unreachable — fall through to 404
+      // ML backend unreachable
     }
-    return NextResponse.json({ error: "Video not available yet" }, { status: 404 });
+    if (!videoPath) {
+      return NextResponse.json(
+        { error: "Video not available yet" },
+        { status: 404 },
+      );
+    }
   }
 
   try {
-    const url = await getPresignedUrl(session.videoPath);
-    return NextResponse.redirect(url);
+    const range = request.headers.get("range") || undefined;
+    const s3Response = await getObjectStream(videoPath, range);
+
+    const headers: Record<string, string> = {
+      "Accept-Ranges": "bytes",
+      "Content-Type": s3Response.ContentType || "video/mp4",
+      "Cache-Control": "private, max-age=3600",
+    };
+
+    if (s3Response.ContentLength != null) {
+      headers["Content-Length"] = String(s3Response.ContentLength);
+    }
+    if (s3Response.ContentRange) {
+      headers["Content-Range"] = s3Response.ContentRange;
+    }
+
+    const status = s3Response.ContentRange ? 206 : 200;
+
+    const body = s3Response.Body;
+    if (!body) {
+      return NextResponse.json(
+        { error: "Empty response from storage" },
+        { status: 502 },
+      );
+    }
+
+    const webStream = body.transformToWebStream();
+
+    return new Response(webStream, { status, headers });
   } catch {
     return NextResponse.json(
-      { error: "Failed to generate video URL" },
+      { error: "Failed to stream video" },
       { status: 500 },
     );
   }
