@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import time
 import uuid
 from io import BytesIO
@@ -24,6 +25,20 @@ from app.services.instances import worker
 from app.services.job_store import job_store
 
 router = APIRouter(prefix="/api/v1")
+
+
+def _check_disk_space() -> None:
+    """Raise 507 if free disk space is below the configured threshold."""
+    try:
+        usage = shutil.disk_usage(settings.upload_dir)
+        free_mb = usage.free / (1024 * 1024)
+        if free_mb < settings.min_free_disk_mb:
+            raise HTTPException(
+                status_code=507,
+                detail=f"Insufficient storage ({int(free_mb)}MB free, need {settings.min_free_disk_mb}MB)",
+            )
+    except OSError:
+        pass  # Can't stat — let the write attempt fail naturally
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -102,14 +117,23 @@ async def analyze_video(
             detail=f"Unsupported file type: {file.content_type}. Allowed: mp4, avi, mov, mkv",
         )
 
-    # Save uploaded file, then create the job
+    # Check disk space before accepting upload
     os.makedirs(settings.upload_dir, exist_ok=True)
+    _check_disk_space()
     file_id = str(uuid.uuid4())
     file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
 
-    with open(file_path, "wb") as f:
-        while chunk := await file.read(8 * 1024 * 1024):  # 8MB chunks
-            f.write(chunk)
+    try:
+        with open(file_path, "wb") as f:
+            while chunk := await file.read(8 * 1024 * 1024):  # 8MB chunks
+                f.write(chunk)
+    except OSError as exc:
+        # Clean up partial file on disk-full or other I/O errors
+        try:
+            os.unlink(file_path)
+        except OSError:
+            pass
+        raise HTTPException(status_code=507, detail="Insufficient storage") from exc
 
     job_id = job_store.create_job(file_path)
 
@@ -148,6 +172,7 @@ async def receive_chunk(request: Request):
         raise HTTPException(status_code=400, detail="Missing x-upload-id header")
 
     os.makedirs(settings.upload_dir, exist_ok=True)
+    _check_disk_space()
 
     # First chunk initialises the upload entry
     if upload_id not in _chunked_uploads:
@@ -162,8 +187,17 @@ async def receive_chunk(request: Request):
     body = await request.body()
 
     # Append chunk to file on disk
-    with open(entry["path"], "ab") as f:
-        f.write(body)
+    try:
+        with open(entry["path"], "ab") as f:
+            f.write(body)
+    except OSError as exc:
+        # Clean up partial file and registry on disk-full
+        try:
+            os.unlink(entry["path"])
+        except OSError:
+            pass
+        del _chunked_uploads[upload_id]
+        raise HTTPException(status_code=507, detail="Insufficient storage") from exc
 
     entry["chunks_received"] += 1
 

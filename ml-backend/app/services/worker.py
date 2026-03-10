@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 
 from app.config import settings
 from app.ml.frame_sampler import extract_frames
@@ -25,6 +26,7 @@ class AnalysisWorker:
 
     def start(self) -> None:
         self._stop_event.clear()
+        self._cleanup_orphaned_uploads()
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
         logger.info("Analysis worker started")
@@ -40,12 +42,37 @@ class AnalysisWorker:
         return self._thread is not None and self._thread.is_alive()
 
     def _run_loop(self) -> None:
+        last_cleanup = time.monotonic()
         while not self._stop_event.is_set():
             job = self._job_store.claim_next_job()
             if job:
                 self._process_job(job)
             else:
                 self._stop_event.wait(timeout=settings.worker_poll_interval)
+
+            # Periodic cleanup every 10 minutes
+            if time.monotonic() - last_cleanup > 600:
+                self._cleanup_orphaned_uploads()
+                last_cleanup = time.monotonic()
+
+    def _cleanup_orphaned_uploads(self) -> None:
+        """Remove upload files older than 1 hour that aren't referenced by active jobs."""
+        upload_dir = settings.upload_dir
+        if not os.path.isdir(upload_dir):
+            return
+
+        cutoff = time.time() - 3600  # 1 hour
+        removed = 0
+        for name in os.listdir(upload_dir):
+            path = os.path.join(upload_dir, name)
+            try:
+                if os.path.isfile(path) and os.path.getmtime(path) < cutoff:
+                    os.remove(path)
+                    removed += 1
+            except OSError:
+                pass
+        if removed:
+            logger.info("Cleaned up %d orphaned upload file(s)", removed)
 
     def _process_job(self, job: dict) -> None:
         job_id = job["id"]

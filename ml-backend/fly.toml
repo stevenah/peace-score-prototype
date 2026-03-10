@@ -30,3 +30,4 @@ primary_region = 'ams'
 [mounts]
   source = 'peace_ml_data'
   destination = '/data'
+  initial_size = '3gb'

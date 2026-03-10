@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     job_db_path: str = "/tmp/peace-jobs/jobs.db"
     worker_poll_interval: float = 1.0
 
+    # Disk space: reject uploads when free space drops below this threshold
+    min_free_disk_mb: int = 512
+
     # S3 config for video storage (optional — skipped if s3_bucket is empty)
     s3_bucket: str = ""
     s3_region: str = "us-east-1"
