@@ -23,8 +23,7 @@ def _get_client():
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
             config=Config(
-                multipart_threshold=8 * 1024 * 1024,  # 8MB
-                multipart_chunksize=8 * 1024 * 1024,
+                s3={"multipart_threshold": 8 * 1024 * 1024},  # 8MB
             ),
         )
     return _client
