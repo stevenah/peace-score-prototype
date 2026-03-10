@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { ML_BACKEND_URL } from "@/lib/constants";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getPresignedUrl } from "@/lib/s3";
 import { computeScoreStats } from "@/lib/utils";
 
 export async function GET(
@@ -56,6 +55,8 @@ export async function GET(
             avgScore: stats.avgScore,
             framesAnalyzed: data.video_metadata?.analyzed_frames ?? null,
             duration: data.video_metadata?.duration_seconds ?? null,
+            // Persist the S3 key from ML backend so the video proxy can find it
+            ...(data.video_path ? { videoPath: data.video_path } : {}),
           },
         });
       } catch {
@@ -63,15 +64,18 @@ export async function GET(
       }
     }
 
-    // Attach presigned S3 URL if we have an uploaded video
-    if (!data.video_url) {
+    // Determine if a video is available and point to the proxy route
+    const hasVideoFromMl = !!data.video_path || !!data.video_url;
+    if (hasVideoFromMl) {
+      data.video_url = `/api/video/${id}`;
+    } else {
       try {
-        const session = await prisma.analysisSession.findUnique({
+        const dbSession = await prisma.analysisSession.findUnique({
           where: { analysisId: id },
           select: { videoPath: true },
         });
-        if (session?.videoPath) {
-          data.video_url = await getPresignedUrl(session.videoPath);
+        if (dbSession?.videoPath) {
+          data.video_url = `/api/video/${id}`;
         }
       } catch {
         // Non-critical
