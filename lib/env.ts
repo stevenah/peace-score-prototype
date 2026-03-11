@@ -9,7 +9,6 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_BUCKET_NAME: z.string().min(1).optional(),
   ML_BACKEND_URL: z.string().default("http://localhost:8000"),
-  ML_BACKEND_PUBLIC_URL: z.string().optional(),
 });
 
 function validateEnv() {

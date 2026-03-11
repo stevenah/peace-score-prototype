@@ -41,6 +41,8 @@ services:
       target: dev
     ports:
       - "8000:8000"
+    env_file:
+      - ./ml-backend/.env
     environment:
       - PEACE_USE_MOCK_MODELS=false
       - PEACE_MODEL_PATH=/app/models/best_model.pt

@@ -1,5 +1,16 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings
+import dotenv
+import os
 
+dotenv.load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+print("--------------------------------")
+print("PEACE_S3_BUCKET: ", os.getenv("PEACE_S3_BUCKET"))
+print("PEACE_S3_REGION: ", os.getenv("PEACE_S3_REGION"))
+print("PEACE_AWS_ACCESS_KEY_ID: ", os.getenv("PEACE_AWS_ACCESS_KEY_ID"))
+print("PEACE_AWS_SECRET_ACCESS_KEY: ", os.getenv("PEACE_AWS_SECRET_ACCESS_KEY"))
+print("--------------------------------")
 
 class Settings(BaseSettings):
     app_name: str = "PEACE ML Backend"
@@ -25,6 +36,5 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
 
     model_config = {"env_prefix": "PEACE_"}
-
 
 settings = Settings()

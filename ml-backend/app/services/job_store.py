@@ -48,6 +48,7 @@ class JobStore:
                 status TEXT NOT NULL DEFAULT 'queued',
                 progress REAL NOT NULL DEFAULT 0.0,
                 file_path TEXT,
+                s3_key TEXT,
                 video_path TEXT,
                 video_metadata TEXT,
                 results TEXT,
@@ -61,12 +62,13 @@ class JobStore:
             )
         """)
         conn.commit()
-        # Migrate existing DBs that lack the video_path column
-        try:
-            conn.execute("ALTER TABLE jobs ADD COLUMN video_path TEXT")
-            conn.commit()
-        except sqlite3.OperationalError:
-            pass  # Column already exists
+        # Migrate existing DBs that lack newer columns
+        for col in ("video_path TEXT", "s3_key TEXT"):
+            try:
+                conn.execute(f"ALTER TABLE jobs ADD COLUMN {col}")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
     def create_job(self, file_path: str) -> str:
         """Insert a new job and return its ID."""
@@ -77,6 +79,19 @@ class JobStore:
             """INSERT INTO jobs (id, status, file_path, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?)""",
             (job_id, AnalysisStatus.QUEUED.value, file_path, now, now),
+        )
+        conn.commit()
+        return job_id
+
+    def create_s3_job(self, s3_key: str) -> str:
+        """Insert a new job that will download its video from S3."""
+        job_id = str(uuid.uuid4())
+        now = _now_iso()
+        conn = self._get_connection()
+        conn.execute(
+            """INSERT INTO jobs (id, status, s3_key, video_path, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (job_id, AnalysisStatus.QUEUED.value, s3_key, s3_key, now, now),
         )
         conn.commit()
         return job_id

@@ -1,25 +1,6 @@
 import type { AnalysisResponse, FrameAnalysisResponse } from "./types";
 
 const API_BASE = "/api";
-const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB per chunk
-
-// ML backend URL for direct chunk uploads (bypasses Next.js proxy).
-// NEXT_PUBLIC_ vars are baked at build time. If missing, derive from hostname.
-function getMLBackendUrl(): string {
-  if (process.env.NEXT_PUBLIC_ML_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_ML_BACKEND_URL;
-  }
-  if (typeof window !== "undefined") {
-    // Production: demo.gipeace.com → peace-ml.fly.dev
-    if (window.location.hostname === "demo.gipeace.com" ||
-        window.location.hostname === "peace-frontend.fly.dev") {
-      return "https://peace-ml.fly.dev";
-    }
-  }
-  return ""; // Local dev — falls back to /ml-api/ rewrite proxy
-}
-
-const ML_BACKEND_URL = getMLBackendUrl();
 
 class ApiError extends Error {
   constructor(
@@ -46,9 +27,11 @@ export function uploadVideo(
   const controller = new AbortController();
 
   const promise = (async (): Promise<{ analysis_id: string }> => {
-    // Step 1: Initialize upload via Next.js (auth + quota check)
+    // Step 1: Initialize upload via Next.js (auth + quota + presigned S3 URL)
     const initRes = await fetch(`${API_BASE}/upload/init`, {
       method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ filename: file.name }),
       signal: controller.signal,
     });
 
@@ -61,82 +44,53 @@ export function uploadVideo(
       throw new ApiError(initRes.status, message);
     }
 
-    const { uploadId } = await initRes.json();
+    const { uploadId, presignedUrl, s3Key } = await initRes.json();
 
-    // Step 2: Send chunks directly to ML backend (bypasses Next.js)
-    // This avoids Next.js body size limits and keeps the 512MB frontend lean.
-    const chunkUrl = ML_BACKEND_URL
-      ? `${ML_BACKEND_URL}/api/v1/upload/chunk`
-      : `/ml-api/upload/chunk`; // fallback to Next.js rewrite proxy for local dev
+    // Step 2: Upload directly to S3 using presigned PUT URL
+    const xhr = new XMLHttpRequest();
+    await new Promise<void>((resolve, reject) => {
+      xhr.open("PUT", presignedUrl);
+      xhr.setRequestHeader("Content-Type", "video/mp4");
 
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    let lastResult: { analysis_id: string } | null = null;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(e.loaded / e.total);
+        }
+      };
 
-    for (let i = 0; i < totalChunks; i++) {
-      if (controller.signal.aborted) {
-        throw new ApiError(0, "Upload aborted");
-      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new ApiError(xhr.status, "S3 upload failed"));
+        }
+      };
+      xhr.onerror = () => reject(new ApiError(0, "S3 upload failed"));
+      xhr.onabort = () => reject(new ApiError(0, "Upload aborted"));
 
-      const start = i * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunk = file.slice(start, end);
+      controller.signal.addEventListener("abort", () => xhr.abort());
+      xhr.send(file);
+    });
 
-      const chunkRes = await fetch(chunkUrl, {
-        method: "POST",
-        headers: {
-          "x-upload-id": uploadId,
-          "x-chunk-index": String(i),
-          "x-total-chunks": String(totalChunks),
-          "x-filename": file.name,
-        },
-        body: chunk,
-        signal: controller.signal,
-      });
-
-      if (!chunkRes.ok) {
-        let message = "Chunk upload failed";
-        try {
-          const data = await chunkRes.json();
-          message = data.message || data.error || message;
-        } catch {}
-        throw new ApiError(chunkRes.status, message);
-      }
-
-      const chunkData = await chunkRes.json();
-
-      // Report progress after each chunk
-      if (onProgress) {
-        onProgress((i + 1) / totalChunks);
-      }
-
-      // Last chunk returns the analysis result
-      if (chunkData.analysis_id) {
-        lastResult = chunkData;
-      }
-    }
-
-    if (!lastResult) {
-      throw new ApiError(0, "Upload completed but no analysis ID received");
-    }
-
-    // Step 3: Register the analysis in the Next.js DB
+    // Step 3: Notify backend — registers in DB and kicks off ML analysis
     const completeRes = await fetch(`${API_BASE}/upload/complete`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         uploadId,
-        analysisId: lastResult.analysis_id,
+        s3Key,
         filename: file.name,
       }),
       signal: controller.signal,
     });
 
     if (!completeRes.ok) {
-      // Non-fatal — analysis still runs, just may not show in dashboard
-      console.error("Failed to register analysis:", await completeRes.text().catch(() => ""));
+      const text = await completeRes.text().catch(() => "Upload complete failed");
+      throw new ApiError(completeRes.status, text);
     }
 
-    return lastResult;
+    const result = await completeRes.json();
+    return { analysis_id: result.analysisId };
   })();
 
   return { promise, abort: () => controller.abort() };

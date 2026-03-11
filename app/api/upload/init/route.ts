@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { registerUpload } from "@/lib/upload-sessions";
+import { getPresignedPutUrl } from "@/lib/s3";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -11,6 +12,8 @@ export async function POST() {
     }
 
     const userId = session.user.id;
+    const body = await request.json().catch(() => ({}));
+    const filename = (body.filename as string) || "upload.mp4";
 
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -66,7 +69,14 @@ export async function POST() {
 
     const uploadId = registerUpload(userId, session.user.email ?? null);
 
-    return NextResponse.json({ uploadId });
+    // Generate S3 presigned PUT URL for direct upload
+    const ext = filename.includes(".")
+      ? filename.slice(filename.lastIndexOf(".")).toLowerCase()
+      : ".mp4";
+    const s3Key = `uploads/${uploadId}${ext}`;
+    const presignedUrl = await getPresignedPutUrl(s3Key, "video/mp4", 3600);
+
+    return NextResponse.json({ uploadId, presignedUrl, s3Key });
   } catch (error) {
     console.error("Upload init error:", error);
     return NextResponse.json(

@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import time
-import uuid
 from io import BytesIO
 from typing import Optional
 
-import cv2
 import numpy as np
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from PIL import Image
+from pydantic import BaseModel
 
 from app.api.schemas import (
     AnalysisResponse,
@@ -93,132 +91,17 @@ async def analyze_frame(
     )
 
 
-@router.post("/analyze/video")
-async def analyze_video(
-    file: UploadFile = File(...),
-    config: Optional[str] = Form(None),
-):
-    """Upload a video for async analysis. The worker thread picks up the job."""
-    # Validate file type (check both content_type and extension)
-    allowed_types = {
-        "video/mp4",
-        "video/avi",
-        "video/quicktime",
-        "video/x-msvideo",
-        "video/x-matroska",
-        "application/octet-stream",  # Common for programmatic uploads
-    }
-    allowed_extensions = {".mp4", ".avi", ".mov", ".mkv"}
-    filename = file.filename or ""
-    ext = filename[filename.rfind("."):].lower() if "." in filename else ""
-    if file.content_type not in allowed_types and ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {file.content_type}. Allowed: mp4, avi, mov, mkv",
-        )
-
-    # Check disk space before accepting upload
-    os.makedirs(settings.upload_dir, exist_ok=True)
-    _check_disk_space()
-    file_id = str(uuid.uuid4())
-    file_path = os.path.join(settings.upload_dir, f"{file_id}.mp4")
-
-    try:
-        with open(file_path, "wb") as f:
-            while chunk := await file.read(8 * 1024 * 1024):  # 8MB chunks
-                f.write(chunk)
-    except OSError as exc:
-        # Clean up partial file on disk-full or other I/O errors
-        try:
-            os.unlink(file_path)
-        except OSError:
-            pass
-        raise HTTPException(status_code=507, detail="Insufficient storage") from exc
-
-    job_id = job_store.create_job(file_path)
-
-    job = job_store.get_job(job_id)
-    return {
-        "analysis_id": job_id,
-        "status": "queued",
-        "estimated_duration_seconds": 30,
-        "created_at": job["created_at"] if job else "",
-    }
+class AnalyzeS3Request(BaseModel):
+    s3_key: str
 
 
-# --- Chunked upload: clients send 8MB pieces directly to the ML backend ---
+@router.post("/analyze/s3")
+async def analyze_from_s3(body: AnalyzeS3Request):
+    """Create an analysis job for a video already uploaded to S3.
 
-# In-memory registry of active chunked uploads.
-# Key = upload_id, value = { path, chunks_received, total_chunks }
-_chunked_uploads: dict[str, dict] = {}
-
-
-@router.post("/upload/chunk")
-async def receive_chunk(request: Request):
-    """Receive a single chunk of a chunked upload.
-
-    Headers:
-      x-upload-id   – identifier returned by the frontend /api/upload/init
-      x-chunk-index – 0-based index of this chunk
-      x-total-chunks – total number of chunks for the file
-      x-filename     – original filename (used on last chunk)
+    The worker thread will download the file from S3 before processing.
     """
-    upload_id = request.headers.get("x-upload-id", "")
-    chunk_index = int(request.headers.get("x-chunk-index", "0"))
-    total_chunks = int(request.headers.get("x-total-chunks", "1"))
-    filename = request.headers.get("x-filename", "upload.mp4")
-
-    if not upload_id:
-        raise HTTPException(status_code=400, detail="Missing x-upload-id header")
-
-    os.makedirs(settings.upload_dir, exist_ok=True)
-    _check_disk_space()
-
-    # First chunk initialises the upload entry
-    if upload_id not in _chunked_uploads:
-        file_path = os.path.join(settings.upload_dir, f"{upload_id}.mp4")
-        _chunked_uploads[upload_id] = {
-            "path": file_path,
-            "chunks_received": 0,
-            "total_chunks": total_chunks,
-        }
-
-    entry = _chunked_uploads[upload_id]
-    body = await request.body()
-
-    # Append chunk to file on disk
-    try:
-        with open(entry["path"], "ab") as f:
-            f.write(body)
-    except OSError as exc:
-        # Clean up partial file and registry on disk-full
-        try:
-            os.unlink(entry["path"])
-        except OSError:
-            pass
-        del _chunked_uploads[upload_id]
-        raise HTTPException(status_code=507, detail="Insufficient storage") from exc
-
-    entry["chunks_received"] += 1
-
-    # Not done yet — acknowledge and wait for more chunks
-    if entry["chunks_received"] < entry["total_chunks"]:
-        return {"ok": True, "chunksReceived": entry["chunks_received"]}
-
-    # All chunks received — create the analysis job
-    file_path = entry["path"]
-    del _chunked_uploads[upload_id]
-
-    allowed_extensions = {".mp4", ".avi", ".mov", ".mkv"}
-    ext = filename[filename.rfind("."):].lower() if "." in filename else ""
-    if ext not in allowed_extensions:
-        try:
-            os.unlink(file_path)
-        except OSError:
-            pass
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
-
-    job_id = job_store.create_job(file_path)
+    job_id = job_store.create_s3_job(body.s3_key)
     job = job_store.get_job(job_id)
     return {
         "analysis_id": job_id,

@@ -11,7 +11,7 @@ from app.config import settings
 from app.ml.frame_sampler import extract_frames
 from app.ml.pipeline import create_pipeline
 from app.services.job_store import JobStore
-from app.services.s3 import upload_video_to_s3
+from app.services.s3 import download_from_s3
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +76,32 @@ class AnalysisWorker:
 
     def _process_job(self, job: dict) -> None:
         job_id = job["id"]
-        file_path = job["file_path"]
-        logger.info("Processing job %s from %s", job_id, file_path)
+        file_path = job.get("file_path")
+        s3_key = job.get("s3_key")
+        local_path = file_path  # May be None for S3 jobs
+
+        logger.info("Processing job %s (file_path=%s, s3_key=%s)", job_id, file_path, s3_key)
 
         try:
+            self._job_store.update_progress(job_id, 0.05)
+
+            # Download from S3 if this is an S3-sourced job
+            if not file_path and s3_key:
+                os.makedirs(settings.upload_dir, exist_ok=True)
+                ext = os.path.splitext(s3_key)[1] or ".mp4"
+                local_path = os.path.join(settings.upload_dir, f"{job_id}{ext}")
+                if not download_from_s3(s3_key, local_path):
+                    raise RuntimeError(f"Failed to download s3://{s3_key}")
+                logger.info("Downloaded S3 file to %s", local_path)
+
+            if not local_path:
+                raise RuntimeError("Job has no file_path and no s3_key")
+
             self._job_store.update_progress(job_id, 0.1)
 
             # Extract frames
             frames, metadata = extract_frames(
-                file_path, sample_rate_fps=settings.sample_rate_fps
+                local_path, sample_rate_fps=settings.sample_rate_fps
             )
             self._job_store.update_progress(job_id, 0.3)
 
@@ -109,16 +126,9 @@ class AnalysisWorker:
             self._job_store.fail_job(job_id, str(e))
 
         finally:
-            job_after = self._job_store.get_job(job_id)
-            if job_after and job_after["status"] in ("completed", "failed"):
-                # Upload video to S3 before deleting local file
-                if job_after["status"] == "completed":
-                    ext = os.path.splitext(file_path)[1] or ".mp4"
-                    s3_key = f"videos/{job_id}{ext}"
-                    if upload_video_to_s3(file_path, s3_key):
-                        self._job_store.set_video_path(job_id, s3_key)
-
+            # Clean up local file
+            if local_path:
                 try:
-                    os.remove(file_path)
+                    os.remove(local_path)
                 except OSError:
                     pass

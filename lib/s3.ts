@@ -2,6 +2,7 @@ import {
   S3Client,
   GetObjectCommand,
   HeadObjectCommand,
+  PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -52,4 +53,20 @@ export async function getObjectHead(key: string) {
   }
   const command = new HeadObjectCommand({ Bucket: bucket, Key: key });
   return getClient().send(command);
+}
+
+export async function getPresignedPutUrl(
+  key: string,
+  contentType: string,
+  expiresIn = 3600,
+) {
+  const bucket = process.env.S3_BUCKET_NAME;
+  if (!bucket) {
+    throw new Error("S3_BUCKET_NAME not configured");
+  }
+  return getSignedUrl(
+    getClient(),
+    new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType }),
+    { expiresIn },
+  );
 }
