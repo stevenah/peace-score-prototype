@@ -62,8 +62,6 @@ export const ALLOWED_VIDEO_TYPES = [
 export const MAX_FILE_SIZE_MB = 1024;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-export const ML_BACKEND_URL =
-  process.env.ML_BACKEND_URL || "http://localhost:8000";
 
 export function getWsUrl(): string {
   if (typeof window === "undefined") return "";

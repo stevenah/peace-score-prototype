@@ -31,9 +31,9 @@ export async function GET(
   let videoPath = session.videoPath;
 
   if (!videoPath) {
-    const mlUrl = process.env.ML_BACKEND_URL || "http://localhost:8000";
     try {
-      const res = await fetch(`${mlUrl}/api/v1/analyze/${analysisId}`);
+      const { fetchMlBackend } = await import("@/lib/ml-backend");
+      const res = await fetchMlBackend(`/api/v1/analyze/${analysisId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.video_path) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { ML_BACKEND_URL } from "@/lib/constants";
+import { fetchMlBackend } from "@/lib/ml-backend";
 import { computeScoreStats } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
@@ -116,8 +116,8 @@ export async function GET(request: NextRequest) {
   if (activeJobs.length > 0) {
     await Promise.allSettled(
       activeJobs.map(async (job) => {
-        const res = await fetch(
-          `${ML_BACKEND_URL}/api/v1/analyze/${job.analysisId}`,
+        const res = await fetchMlBackend(
+          `/api/v1/analyze/${job.analysisId}`,
         );
         if (!res.ok) return null;
         const data = await res.json();
