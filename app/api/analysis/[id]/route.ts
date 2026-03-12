@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ML_BACKEND_URL } from "@/lib/constants";
+import { fetchMlBackend } from "@/lib/ml-backend";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { computeScoreStats } from "@/lib/utils";
@@ -25,7 +25,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const response = await fetch(`${ML_BACKEND_URL}/api/v1/analyze/${id}`);
+    const response = await fetchMlBackend(`/api/v1/analyze/${id}`);
 
     if (!response.ok) {
       const text = await response.text();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
-import { ML_BACKEND_URL } from "@/lib/constants";
+import { fetchMlBackend } from "@/lib/ml-backend";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,11 +21,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Notify ML backend to start analysis from S3
-    const mlRes = await fetch(`${ML_BACKEND_URL}/api/v1/analyze/s3`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ s3_key: s3Key }),
-    });
+    let mlRes: Response;
+    try {
+      mlRes = await fetchMlBackend("/api/v1/analyze/s3", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ s3_key: s3Key }),
+      });
+    } catch {
+      console.error("ML backend unreachable (all URLs failed)");
+      return NextResponse.json(
+        { error: "Failed to start analysis" },
+        { status: 502 },
+      );
+    }
 
     if (!mlRes.ok) {
       const text = await mlRes.text().catch(() => "ML backend error");
