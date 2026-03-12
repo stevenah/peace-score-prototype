@@ -146,9 +146,9 @@ class AnalysisPipeline:
                 ],
             }
 
-        # Overall score = average across all frames (rounded to nearest int)
+        # Overall score = average across all frames (keep decimal)
         all_scores = [r.peace_score["score"] for r in results]
-        overall_score = round(sum(all_scores) / len(all_scores))
+        overall_score = round(sum(all_scores) / len(all_scores), 2)
         overall_confidence = round(
             sum(r.peace_score["confidence"] for r in results) / len(results), 2
         )
@@ -158,7 +158,7 @@ class AnalysisPipeline:
             "peace_scores": {
                 "overall": {
                     "score": overall_score,
-                    "label": SCORE_LABELS[overall_score],
+                    "label": SCORE_LABELS[round(overall_score)],
                     "confidence": overall_confidence,
                 },
                 "by_region": by_region,
