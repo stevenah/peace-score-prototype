@@ -55,7 +55,7 @@ class FrameContext(BaseModel):
 
 
 class PeaceScoreResult(BaseModel):
-    score: int = Field(ge=0, le=3)
+    score: float = Field(ge=0, le=3)
     label: str
     confidence: float = Field(ge=0.0, le=1.0)
 
