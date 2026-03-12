@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     app_name: str = "PEACE ML Backend"
     version: str = "0.1.0"
     debug: bool = True
-    use_mock_models: bool = True
+    use_mock_models: bool = False
     sample_rate_fps: float = 2.0
     max_upload_size_mb: int = 1024
     upload_dir: str = "/tmp/peace-uploads"
