@@ -146,9 +146,9 @@ class AnalysisPipeline:
                 ],
             }
 
-        # Overall score = min across all regions
+        # Overall score = average across all frames (rounded to nearest int)
         all_scores = [r.peace_score["score"] for r in results]
-        overall_score = min(all_scores)
+        overall_score = round(sum(all_scores) / len(all_scores))
         overall_confidence = round(
             sum(r.peace_score["confidence"] for r in results) / len(results), 2
         )
