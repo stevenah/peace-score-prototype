@@ -8,7 +8,7 @@ import { MotionIndicator } from "@/components/analysis/MotionIndicator";
 import { MotionVisual } from "@/components/analysis/MotionVisual";
 import { RegionHighlight } from "@/components/scoring/RegionHighlight";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
-import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
+import { ScoreTimelineBar } from "@/components/scoring/ScoreTimelineBar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   VideoPlaybackPlayer,
@@ -30,15 +30,22 @@ export default function ResultsPage({
   const playerRef = useRef<VideoPlaybackPlayerHandle>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [replayTime, setReplayTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
   const animRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
 
   const results = analysis?.results;
   const hasVideo = !!analysis?.video_url;
   const videoSrc = hasVideo ? `/api/video/${id}` : undefined;
-  const totalDuration = results?.timeline?.length
+  const metadataDuration = analysis?.video_metadata?.duration_seconds ?? 0;
+  const timelineDuration = results?.timeline?.length
     ? results.timeline[results.timeline.length - 1].timestamp
     : 0;
+  const totalDuration = videoDuration > 0
+    ? videoDuration
+    : metadataDuration > 0
+      ? metadataDuration
+      : timelineDuration;
 
   const activeEntry: TimelineEntry | null =
     results?.timeline?.length && replayTime > 0
@@ -134,6 +141,7 @@ export default function ResultsPage({
                   ref={playerRef}
                   src={videoSrc!}
                   onTimeUpdate={setReplayTime}
+                  onVideoReady={setVideoDuration}
                   peaceScore={
                     activeEntry
                       ? (activeEntry.peace_score as PeaceScore)
@@ -288,7 +296,7 @@ export default function ResultsPage({
 
           {results.timeline.length > 0 && (
             <div className="space-y-3">
-              <PeaceScoreTimeline
+              <ScoreTimelineBar
                 timeline={results.timeline}
                 totalDuration={totalDuration}
                 currentTime={replayTime}

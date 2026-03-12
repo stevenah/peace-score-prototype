@@ -5,7 +5,7 @@ import { Video, VideoOff } from "lucide-react";
 import { LiveFeedViewer } from "@/components/video/LiveFeedViewer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
 import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
-import { PeaceScoreTimeline } from "@/components/scoring/PeaceScoreTimeline";
+import { ScoreTimelineBar } from "@/components/scoring/ScoreTimelineBar";
 import { Button } from "@/components/ui/Button";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import type { PeaceScore, MotionDirection, TimelineEntry } from "@/lib/types";
@@ -111,7 +111,12 @@ export default function LivePage() {
         </div>
       </div>
 
-      {timeline.length > 5 && <PeaceScoreTimeline timeline={timeline} />}
+      {timeline.length > 5 && (
+        <ScoreTimelineBar
+          timeline={timeline}
+          totalDuration={timeline.length > 0 ? timeline[timeline.length - 1].timestamp : 0}
+        />
+      )}
     </div>
   );
 }
