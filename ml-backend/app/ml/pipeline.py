@@ -19,6 +19,14 @@ from app.ml.mock_models import (
 )
 
 
+from app.ml.real_models import (
+    ModelManager,
+    RealMotionDetector,
+    RealPEACEClassifier,
+    RealRegionDetector,
+    SessionState,
+)
+
 @dataclass
 class FrameResult:
     frame_index: int
@@ -216,13 +224,11 @@ def create_pipeline() -> AnalysisPipeline:
             sample_rate_fps=settings.sample_rate_fps,
         )
     else:
-        from app.ml.real_models import (
-            ModelManager,
-            RealMotionDetector,
-            RealPEACEClassifier,
-            RealRegionDetector,
-            SessionState,
-        )
+
+        print("--------------------------------")
+        print("model_path: ", settings.model_path)
+        print("device: ", settings.device)
+        print("--------------------------------")
 
         manager = ModelManager.get_instance(settings.model_path, settings.device)
         session = SessionState()
