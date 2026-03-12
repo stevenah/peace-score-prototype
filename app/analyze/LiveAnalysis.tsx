@@ -142,7 +142,7 @@ export function LiveAnalysis({
     setSaveError(null);
 
     const scores = results.map((r) => r.peace_score.score as number);
-    const overallScore = Math.min(...scores);
+    const overallScore = Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 100) / 100;
     const minScore = Math.min(...scores);
     const maxScore = Math.max(...scores);
     const avgScore = Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 100) / 100;

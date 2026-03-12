@@ -224,12 +224,17 @@ export default function ResultsPage({
                       </span>
                       <span className="text-sm text-muted-foreground/60">/ 3</span>
                     </div>
-                    <p
-                      className="shrink-0 text-sm font-medium"
-                      style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
-                    >
-                      {PEACE_SCORE_LABELS[activeEntry.peace_score as PeaceScore]}
-                    </p>
+                    <div className="shrink-0 space-y-0.5 text-center">
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
+                      >
+                        {PEACE_SCORE_LABELS[activeEntry.peace_score as PeaceScore]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {Math.round(activeEntry.confidence * 100)}% confidence
+                      </p>
+                    </div>
                   </Card>
 
                   <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
@@ -259,6 +264,7 @@ export default function ResultsPage({
                       {activeEntry.region || "\u00A0"}
                     </p>
                   </Card>
+
                 </>
               ) : (
                 <>
@@ -269,18 +275,23 @@ export default function ResultsPage({
                     <div className="flex items-baseline gap-1.5">
                       <span
                         className="text-4xl font-bold"
-                        style={{ color: PEACE_SCORE_COLORS[results.peace_scores.overall.score as PeaceScore] }}
+                        style={{ color: PEACE_SCORE_COLORS[Math.round(results.peace_scores.overall.score) as PeaceScore] }}
                       >
                         {results.peace_scores.overall.score}
                       </span>
                       <span className="text-sm text-muted-foreground/60">/ 3</span>
                     </div>
-                    <p
-                      className="shrink-0 text-sm font-medium"
-                      style={{ color: PEACE_SCORE_COLORS[results.peace_scores.overall.score as PeaceScore] }}
-                    >
-                      {results.peace_scores.overall.label || PEACE_SCORE_LABELS[results.peace_scores.overall.score as PeaceScore]}
-                    </p>
+                    <div className="shrink-0 space-y-0.5 text-center">
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: PEACE_SCORE_COLORS[Math.round(results.peace_scores.overall.score) as PeaceScore] }}
+                      >
+                        {results.peace_scores.overall.label || PEACE_SCORE_LABELS[Math.round(results.peace_scores.overall.score) as PeaceScore]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {Math.round(results.peace_scores.overall.confidence * 100)}% confidence
+                      </p>
+                    </div>
                   </Card>
 
                   <Card className="flex flex-1 flex-col items-center text-center">
@@ -296,6 +307,7 @@ export default function ResultsPage({
                     </p>
                     <p className="text-sm font-medium text-muted-foreground/30">—</p>
                   </Card>
+
                 </>
               )}
             </div>

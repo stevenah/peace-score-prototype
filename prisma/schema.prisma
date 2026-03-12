@@ -28,7 +28,7 @@ model AnalysisSession {
   analysisId     String    @unique
   filename       String
   status         String    @default("processing")
-  overallScore   Int?
+  overallScore   Float?
   minScore       Int?
   maxScore       Int?
   avgScore       Float?

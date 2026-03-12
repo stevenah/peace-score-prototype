@@ -81,7 +81,8 @@ export const AnalysisCard = memo(function AnalysisCard({
   const [open, setOpen] = useState(false);
   const isComplete = analysis.status === "completed";
   const isActive = analysis.status === "processing" || analysis.status === "queued";
-  const score = analysis.overallScore as PeaceScore | null;
+  const score = analysis.overallScore;
+  const scoreInt = score !== null ? Math.round(score) as PeaceScore : null;
 
   function handleDelete() {
     const formData = new FormData();
@@ -152,21 +153,21 @@ export const AnalysisCard = memo(function AnalysisCard({
             </p>
           )}
 
-          {isComplete && score !== null && (
+          {isComplete && score !== null && scoreInt !== null && (
             <div className="flex items-center gap-4">
               <div>
                 <span
                   className="text-2xl font-bold"
-                  style={{ color: PEACE_SCORE_COLORS[score] }}
+                  style={{ color: PEACE_SCORE_COLORS[scoreInt] }}
                 >
                   {score}
                 </span>
                 <span className="text-sm text-muted-foreground"> / 3</span>
                 <p
                   className="text-xs font-medium"
-                  style={{ color: PEACE_SCORE_COLORS[score] }}
+                  style={{ color: PEACE_SCORE_COLORS[scoreInt] }}
                 >
-                  {PEACE_SCORE_LABELS[score]}
+                  {PEACE_SCORE_LABELS[scoreInt]}
                 </p>
               </div>
               <div className="flex-1 space-y-1 text-xs text-muted-foreground">

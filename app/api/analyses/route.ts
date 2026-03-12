@@ -55,7 +55,11 @@ export async function GET(request: NextRequest) {
     }),
     ...((status === "completed" || status === "failed") && { status }),
     ...(search && { filename: { contains: search } }),
-    ...(scoreValues.length > 0 && { overallScore: { in: scoreValues } }),
+    ...(scoreValues.length > 0 && {
+      OR: scoreValues.map((v) => ({
+        overallScore: { gte: v - 0.5, lt: v + 0.5 },
+      })),
+    }),
     ...(dateCutoff && { createdAt: { gte: dateCutoff } }),
   };
 
