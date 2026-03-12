@@ -7,8 +7,9 @@ import type { PeaceScore, TimelineEntry } from "@/lib/types";
 
 const LazyRecharts = lazy(() =>
   import("recharts").then((mod) => ({
-    default: ({ data, onSeek, renderDot, renderTooltip }: {
+    default: ({ data, alerts, onSeek, renderDot, renderTooltip }: {
       data: Record<string, unknown>[];
+      alerts: { time: number; index: number }[];
       onSeek?: (time: number) => void;
       renderDot: (props: Record<string, unknown>) => React.ReactElement;
       renderTooltip: (props: Record<string, unknown>) => React.ReactNode;
@@ -36,6 +37,20 @@ const LazyRecharts = lazy(() =>
           />
           <mod.Tooltip content={renderTooltip} />
           <mod.ReferenceLine y={2} stroke="#84cc16" strokeDasharray="3 3" opacity={0.4} />
+          {alerts.map((alert) => (
+            <mod.ReferenceArea
+              key={`alert-${alert.index}`}
+              x1={String(alert.time)}
+              x2={String(data[alert.index + 1]
+                ? (data[alert.index + 1] as { time: number }).time
+                : alert.time)}
+              y1={0}
+              y2={3}
+              fill="#ef4444"
+              fillOpacity={0.08}
+              ifOverflow="extendDomain"
+            />
+          ))}
           <mod.Area
             type="stepAfter"
             dataKey="peace_score"
@@ -79,6 +94,17 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
     return points.length > 0 ? points : [{ time: 0 }, { time: maxTime }];
   }, [timeline, maxTime]);
 
+  const alerts = useMemo(() =>
+    timeline.reduce<{ time: number; index: number }[]>((acc, entry, i) => {
+      if (entry.motion === "withdrawal" && entry.peace_score < 2) {
+        acc.push({ time: entry.timestamp, index: i });
+      }
+      return acc;
+    }, []),
+  [timeline]);
+
+  const alertIndices = useMemo(() => new Set(alerts.map((a) => a.index)), [alerts]);
+
   const activeIdx = useMemo(() => {
     if (currentTime == null || timeline.length === 0) return -1;
     let best = 0;
@@ -101,25 +127,41 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
       payload: { peace_score: PeaceScore };
     };
     const isActive = index === activeIdx;
+    const isAlert = alertIndices.has(index);
     return (
-      <circle
-        key={`dot-${cx}-${cy}`}
-        cx={cx}
-        cy={cy}
-        r={isActive ? 5 : 3.5}
-        fill={PEACE_SCORE_COLORS[payload.peace_score as PeaceScore]}
-        stroke={isActive ? "#fff" : "none"}
-        strokeWidth={isActive ? 2 : 0}
-      />
+      <g key={`dot-${cx}-${cy}`}>
+        {isAlert && (
+          <polygon
+            points={`${cx},${cy - 11} ${cx - 6},${cy - 21} ${cx + 6},${cy - 21}`}
+            fill="#ef4444"
+            stroke="#fff"
+            strokeWidth={1}
+          />
+        )}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={isActive ? 5 : isAlert ? 4.5 : 3.5}
+          fill={isAlert ? "#ef4444" : PEACE_SCORE_COLORS[payload.peace_score as PeaceScore]}
+          stroke={isActive ? "#fff" : isAlert ? "#fca5a5" : "none"}
+          strokeWidth={isActive ? 2 : isAlert ? 1.5 : 0}
+        />
+      </g>
     );
-  }, [activeIdx]);
+  }, [activeIdx, alertIndices]);
 
   const renderTooltip = useCallback((props: Record<string, unknown>) => {
     const { active, payload } = props as { active?: boolean; payload?: readonly { payload: Record<string, unknown> }[] };
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
+    const isAlertPoint = d.motion === "withdrawal" && (d.peace_score as number) < 2;
     return (
       <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-md">
+        {isAlertPoint && (
+          <p className="mb-1 font-semibold text-red-500">
+            ⚠ Alert: Insufficient cleaning during withdrawal
+          </p>
+        )}
         <p className="font-medium" style={{ color: d.scoreColor as string }}>
           Score: {d.peace_score as number}
         </p>
@@ -135,15 +177,24 @@ export const PeaceScoreTimeline = memo(function PeaceScoreTimeline({ timeline, t
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground/80">
-          Score Timeline
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground/80">
+            Score Timeline
+          </h3>
+          {alerts.length > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+              {alerts.length} alert{alerts.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
         <ScoreLegend />
       </div>
       <div className={`h-48 rounded-xl border border-border bg-card p-4 ring-1 ring-black/3 dark:ring-white/3 ${onSeek ? "cursor-pointer" : ""}`}>
         <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-muted-foreground">Loading chart...</div>}>
           <LazyRecharts
             data={data}
+            alerts={alerts}
             onSeek={onSeek}
             renderDot={renderDot}
             renderTooltip={renderTooltip}
