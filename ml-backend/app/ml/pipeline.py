@@ -116,15 +116,15 @@ class AnalysisPipeline:
         by_region = {}
         for region, region_frames in region_results.items():
             scores = [f.peace_score["score"] for f in region_frames]
-            # Use minimum score in region (per PEACE methodology)
-            min_score = min(scores)
+            # Use average score in region (rounded to nearest integer)
+            avg_score = round(sum(scores) / len(scores))
             avg_confidence = sum(
                 f.peace_score["confidence"] for f in region_frames
             ) / len(region_frames)
 
             by_region[region] = {
-                "score": min_score,
-                "label": SCORE_LABELS[min_score],
+                "score": avg_score,
+                "label": SCORE_LABELS[avg_score],
                 "confidence": round(avg_confidence, 2),
                 "region": region,
                 "frame_scores": [
