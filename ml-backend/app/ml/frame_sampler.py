@@ -18,7 +18,7 @@ class ExtractedFrame:
 def extract_frames(
     video_path: str,
     sample_rate_fps: float = 2.0,
-    max_frames: int = 500,
+    max_frames: int = 0,
 ) -> tuple[list[ExtractedFrame], dict]:
     """Extract frames from a video at the given sample rate.
 
@@ -53,7 +53,7 @@ def extract_frames(
         if not ret:
             break
 
-        if frame_idx % frame_interval == 0 and len(frames) < max_frames:
+        if frame_idx % frame_interval == 0 and (max_frames <= 0 or len(frames) < max_frames):
             timestamp = frame_idx / fps if fps > 0 else 0
             # Convert BGR to RGB
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
