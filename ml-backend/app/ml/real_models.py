@@ -110,10 +110,18 @@ class ModelManager:
 class SessionState:
     """Per-connection state for temporal smoothing."""
 
-    def __init__(self, alpha: float = 0.3):
-        self.alpha = alpha
+    def __init__(
+        self,
+        region_alpha: float = 0.15,
+        score_alpha: float = 0.3,
+        region_switch_margin: float = 0.1,
+    ):
+        self.region_alpha = region_alpha
+        self.score_alpha = score_alpha
+        self.region_switch_margin = region_switch_margin
         self.region_probs: np.ndarray | None = None
         self.score_probs: np.ndarray | None = None
+        self.current_region: int | None = None
         self.last_result: dict | None = None
 
     def smooth(
@@ -125,13 +133,28 @@ class SessionState:
             self.score_probs = score_probs.copy()
         else:
             self.region_probs = (
-                self.alpha * region_probs + (1 - self.alpha) * self.region_probs
+                self.region_alpha * region_probs
+                + (1 - self.region_alpha) * self.region_probs
             )
             self.score_probs = (
-                self.alpha * score_probs + (1 - self.alpha) * self.score_probs
+                self.score_alpha * score_probs
+                + (1 - self.score_alpha) * self.score_probs
             )
 
-        region_idx = int(np.argmax(self.region_probs))
+        # Hysteresis: only switch region if the new best exceeds the
+        # current region's smoothed probability by a margin
+        best_region = int(np.argmax(self.region_probs))
+        if self.current_region is None:
+            self.current_region = best_region
+        elif best_region != self.current_region:
+            lead = (
+                self.region_probs[best_region]
+                - self.region_probs[self.current_region]
+            )
+            if lead > self.region_switch_margin:
+                self.current_region = best_region
+
+        region_idx = self.current_region
         score_idx = int(np.argmax(self.score_probs))
 
         return (
