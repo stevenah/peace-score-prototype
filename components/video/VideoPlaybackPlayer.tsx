@@ -36,13 +36,15 @@ interface VideoPlaybackPlayerProps {
   peaceScore?: PeaceScore | null;
   motionDirection?: MotionDirection | null;
   region?: string | null;
+  /** Custom scrubber element (e.g. ScoreTimelineBar) rendered in place of the default progress bar */
+  scrubber?: React.ReactNode;
 }
 
 export const VideoPlaybackPlayer = forwardRef<
   VideoPlaybackPlayerHandle,
   VideoPlaybackPlayerProps
 >(function VideoPlaybackPlayer(
-  { src, onTimeUpdate, onVideoReady, peaceScore, motionDirection, region },
+  { src, onTimeUpdate, onVideoReady, peaceScore, motionDirection, region, scrubber },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -359,22 +361,24 @@ export const VideoPlaybackPlayer = forwardRef<
             <RotateCcw className="h-4 w-4" />
           </Button>
 
-          <div
-            ref={scrubRef}
-            className="group relative flex-1 cursor-pointer py-1"
-            onMouseDown={handleScrubStart}
-          >
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          {scrubber || (
+            <div
+              ref={scrubRef}
+              className="group relative flex-1 cursor-pointer py-1"
+              onMouseDown={handleScrubStart}
+            >
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-100 ease-linear"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
               <div
-                className="h-full rounded-full bg-primary transition-[width] duration-100 ease-linear"
-                style={{ width: `${progress}%` }}
+                className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
+                style={{ left: `${progress}%` }}
               />
             </div>
-            <div
-              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
-              style={{ left: `${progress}%` }}
-            />
-          </div>
+          )}
 
           <span className="text-xs tabular-nums text-muted-foreground">
             {formatDuration(currentTime)} / {formatDuration(duration)}

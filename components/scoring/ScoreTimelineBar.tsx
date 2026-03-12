@@ -148,28 +148,8 @@ export const ScoreTimelineBar = memo(function ScoreTimelineBar({
         <ScoreLegend />
       </div>
 
-      {/* Bar container with alert markers + segments + playhead */}
+      {/* Bar container with segments + playhead + alert markers below */}
       <div className="relative">
-        {/* Alert markers row */}
-        {alerts.length > 0 && (
-          <div className="relative mb-1 h-2">
-            {alerts.map((alert, i) => {
-              const left = (alert.startTime / maxTime) * 100;
-              return (
-                <div
-                  key={i}
-                  className="absolute -translate-x-1/2"
-                  style={{ left: `${left}%`, top: 0 }}
-                >
-                  <svg width="8" height="8" viewBox="0 0 8 8">
-                    <polygon points="4,0 8,8 0,8" fill="#ef4444" />
-                  </svg>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {/* Segmented bar */}
         <div
           ref={barRef}
@@ -206,6 +186,26 @@ export const ScoreTimelineBar = memo(function ScoreTimelineBar({
             </div>
           )}
         </div>
+
+        {/* Alert markers below the bar */}
+        {alerts.length > 0 && (
+          <div className="relative mt-1 h-2">
+            {alerts.map((alert, i) => {
+              const left = (alert.startTime / maxTime) * 100;
+              return (
+                <div
+                  key={i}
+                  className="absolute -translate-x-1/2"
+                  style={{ left: `${left}%`, top: 0 }}
+                >
+                  <svg width="8" height="8" viewBox="0 0 8 8">
+                    <polygon points="4,8 8,0 0,0" fill="#ef4444" />
+                  </svg>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Hover tooltip */}
         {hoverInfo && (

@@ -149,6 +149,17 @@ export default function ResultsPage({
                   }
                   motionDirection={activeEntry?.motion ?? null}
                   region={activeEntry?.region ?? null}
+                  scrubber={
+                    results.timeline.length > 0 ? (
+                      <ScoreTimelineBar
+                        timeline={results.timeline}
+                        totalDuration={totalDuration}
+                        currentTime={replayTime}
+                        onSeek={(t) => playerRef.current?.seekTo(t)}
+                        className="flex-1"
+                      />
+                    ) : undefined
+                  }
                 />
               ) : (
                 <Card className="flex h-full items-center justify-center">
@@ -294,24 +305,18 @@ export default function ResultsPage({
             <PeaceScoreGrid byRegion={results.peace_scores.by_region} />
           )}
 
-          {results.timeline.length > 0 && (
+          {results.timeline.length > 0 && !hasVideo && (
             <div className="space-y-3">
               <ScoreTimelineBar
                 timeline={results.timeline}
                 totalDuration={totalDuration}
                 currentTime={replayTime}
                 onSeek={(t) => {
-                  if (hasVideo) {
-                    playerRef.current?.seekTo(t);
-                  } else {
-                    setReplayTime(t);
-                    setIsPlaying(false);
-                  }
+                  setReplayTime(t);
+                  setIsPlaying(false);
                 }}
               />
-              {/* Only show animation controls when there's no video player */}
-              {!hasVideo && (
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setIsPlaying((p) => !p)}
@@ -346,7 +351,6 @@ export default function ResultsPage({
                     </span>
                   )}
                 </div>
-              )}
             </div>
           )}
 
