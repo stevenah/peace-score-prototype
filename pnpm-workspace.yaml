@@ -1,0 +1,8 @@
+# Build scripts we allow to run on install (pnpm blocks these by default).
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+  esbuild: true
+  msw: false

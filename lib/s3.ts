@@ -10,12 +10,16 @@ let _client: S3Client | null = null;
 
 function getClient(): S3Client {
   if (!_client) {
+    // S3_ENDPOINT points at an S3-compatible server (e.g. MinIO on
+    // http://localhost:9000) for fully local development. Unset => real AWS.
+    const endpoint = process.env.S3_ENDPOINT;
     _client = new S3Client({
       region: process.env.AWS_REGION || "us-east-1",
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       },
+      ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
     });
   }
   return _client;

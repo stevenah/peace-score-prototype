@@ -18,13 +18,20 @@ _client = None
 def _get_client():
     global _client
     if _client is None and settings.s3_bucket:
+        # PEACE_S3_ENDPOINT points at an S3-compatible server (e.g. MinIO on
+        # http://localhost:9000) for fully local development. Unset => real AWS.
+        endpoint = settings.s3_endpoint or None
         _client = boto3.client(
             "s3",
             region_name=settings.s3_region,
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
+            endpoint_url=endpoint,
             config=Config(
-                s3={"multipart_threshold": 8 * 1024 * 1024},  # 8MB
+                s3={
+                    "multipart_threshold": 8 * 1024 * 1024,  # 8MB
+                    **({"addressing_style": "path"} if endpoint else {}),
+                },
             ),
         )
     return _client

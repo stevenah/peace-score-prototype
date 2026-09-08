@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PEACE Web Prototype
 
-## Getting Started
+Next.js frontend + FastAPI ML backend for endoscopy video analysis.
 
-First, run the development server:
+## Local setup
+
+Ports: **frontend 3001**, **ML backend 8001**, Postgres 5432, MinIO 9000/9001.
+(3000 and 8000 are deliberately avoided — they collide with other projects.)
+
+### Prerequisites
+
+- Node 20+ and [pnpm](https://pnpm.io) (`corepack enable`)
+- [uv](https://docs.astral.sh/uv/) for the Python backend
+- Postgres reachable at `localhost:5432` — either a native install, or `make db-up`
+  to run one in Docker on 5433 (adjust `DATABASE_URL` accordingly)
+
+### One-time bootstrap
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+make bootstrap
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+That copies `.env.example` to `.env` if needed, installs both dependency trees,
+generates the Prisma client, applies migrations, and seeds the database.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Run it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Two terminals:
 
-## Learn More
+```bash
+make dev-web   # http://localhost:3001
+make dev-ml    # http://localhost:8001  (docs at /docs)
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Video storage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Uploads go straight from the browser to S3 via a presigned URL, so uploads and
+playback need object storage. Two options:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Fully local (no AWS):** `make minio-up`, then uncomment the MinIO block at
+  the bottom of `.env`. Both S3 clients honour `S3_ENDPOINT` /
+  `PEACE_S3_ENDPOINT` and switch to path-style addressing automatically.
+- **Real AWS:** leave `S3_ENDPOINT` unset and fill in the AWS keys.
 
-## Deploy on Vercel
+Everything else — auth, analysis history, live frame analysis — works without
+object storage configured.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Everything in containers
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+make docker-up
+```
+
+Brings up Postgres, MinIO, the ML backend and the frontend, already wired to
+each other. Frontend on 3001, ML backend on 8001.
+
+## Common tasks
+
+```bash
+make check       # lint + typecheck + tests
+make test        # frontend (vitest) + backend (pytest)
+make db-studio   # Prisma Studio
+make help        # all targets
+```
+
+## Deployment
+
+`fly.toml` and `ml-backend/fly.toml` describe the Fly.io deployment
+(`peace-frontend` and `peace-ml`). Both apps are currently scaled to zero. The
+local setup above does not depend on them.
+
+## Notes
+
+- The model weights (`ml-backend/app/models/best_model.pt`, ~73 MB) are committed,
+  so a fresh clone can run analysis with no extra download.
+- The ML backend requires Python 3.11 or 3.12 — PyTorch has no 3.13+ wheels yet.
+  `uv sync` picks a compatible interpreter automatically.

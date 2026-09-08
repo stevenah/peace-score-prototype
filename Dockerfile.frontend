@@ -2,25 +2,27 @@ FROM node:20-alpine AS base
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN corepack enable && corepack prepare pnpm@11.21.0 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
-RUN npx prisma generate
+RUN pnpm exec prisma generate
 
 # --- Dev stage: next dev with hot reload ---
 FROM base AS dev
-EXPOSE 3000
-ENV PORT=3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npx next dev --hostname 0.0.0.0"]
+EXPOSE 3001
+ENV PORT=3001
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec next dev --hostname 0.0.0.0 --port 3001"]
 
 # --- Prod stage: build and serve ---
 FROM base AS prod
 ENV NEXTAUTH_SECRET=build-placeholder
-RUN npm run build
+RUN pnpm build
 
 # Copy standalone output and static/public assets
 RUN cp -r .next/standalone/. ./standalone/
