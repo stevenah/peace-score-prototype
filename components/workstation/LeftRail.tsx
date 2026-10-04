@@ -12,13 +12,14 @@ import {
   useProcedureSlice,
   useProcedureStore,
 } from "@/hooks/useProcedureMetrics";
-import { STATION_REGION } from "@/lib/live/stations";
+import { STATION_ORDER, STATION_REGION } from "@/lib/live/stations";
 import { CoverageMap, type RegionCoverageState } from "./CoverageMap";
 import { ScoreRing } from "./ScoreRing";
 import {
   StationChecklist,
   StationsErrorBoundary,
   nextManualMark,
+  stationRowState,
 } from "./StationChecklist";
 import type { AnatomicalRegion } from "@/lib/types";
 import type {
@@ -82,6 +83,15 @@ export function LeftRail({ dimmed }: { dimmed: boolean }) {
     },
     {} as Record<AnatomicalRegion, RegionCoverageState>,
   );
+
+  // The map's pins say exactly what the checklist rows say.
+  const stationMarks = stations.visible
+    ? STATION_ORDER.map((key, i) => ({
+        state: stationRowState(stations, i),
+        current: stations.current === key,
+        overdue: ended && !stations.observed[i],
+      }))
+    : undefined;
 
   return (
     <aside
@@ -210,6 +220,7 @@ export function LeftRail({ dimmed }: { dimmed: boolean }) {
       <div className="mt-auto flex min-h-0 shrink-0 justify-center pt-3">
         <CoverageMap
           states={coverageStates}
+          stations={stationMarks}
           // Smaller while the checklist shares the rail, so both fit at 1080p.
           className={stations.visible ? "h-[150px] w-auto" : "h-[200px] w-auto"}
         />

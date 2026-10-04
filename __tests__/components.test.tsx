@@ -518,10 +518,29 @@ describe("LeftRail with stations", () => {
   it("shows nothing station-related in shadow mode", () => {
     const store = new ProcedureStore();
     store.ingest(landmarkFrame(0, { observed: ["antrum"], display: false }));
-    renderRail(store);
+    const { container } = renderRail(store);
     expect(screen.getByText("Frames analysed:")).toBeInTheDocument();
     expect(screen.queryByText("Stations observed:")).toBeNull();
     expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // The tract map is still drawn, but without a single station pin.
+    expect(screen.getByRole("img", { name: /^Coverage:/ })).toBeInTheDocument();
+    expect(container.querySelector("[data-station]")).toBeNull();
+  });
+
+  it("pins all ten stations on the tract map, in their checklist state", () => {
+    const store = new ProcedureStore();
+    store.ingest(landmarkFrame(0, { observed: ["antrum"], current: "antrum" }));
+    const { container } = renderRail(store);
+    const pin = (key: StationKey) =>
+      container.querySelector(`[data-station="${key}"]`)?.getAttribute("data-state");
+
+    expect(container.querySelectorAll("[data-station]")).toHaveLength(10);
+    expect(pin("antrum")).toBe("observed");
+    expect(pin("incisura")).toBe("unseen");
+
+    // A manual mark on the row moves the pin with it.
+    fireEvent.click(screen.getByRole("button", { name: /^Incisura angularis — not yet observed/ }));
+    expect(pin("incisura")).toBe("confirmed");
   });
 
   it("derives the region label from the current station", () => {
