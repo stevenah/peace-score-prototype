@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ApiError, getAnalysis, analyzeFrame, saveLiveAnalysis } from "@/lib/api-client";
+import {
+  ApiError,
+  getAnalysis,
+  analyzeFrame,
+  saveLiveAnalysis,
+  updateLiveStations,
+} from "@/lib/api-client";
 
 // -- ApiError ---------------------------------------------------------------
 
@@ -170,5 +176,86 @@ describe("saveLiveAnalysis", () => {
 
     const body = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
     expect(body.has("video")).toBe(true);
+  });
+});
+
+// -- stations persistence -----------------------------------------------------
+
+describe("saveLiveAnalysis — stations", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const base = {
+    filename: "test.mp4",
+    overallScore: 2,
+    minScore: 1,
+    maxScore: 3,
+    avgScore: 2,
+    framesAnalyzed: 5,
+    duration: 3,
+    timeline: [],
+  };
+
+  it("omits the stations key entirely when there is no summary", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ id: "db-1", analysisId: "live_1" }), { status: 200 }),
+    );
+    await saveLiveAnalysis(base);
+    const body = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+    expect("stations" in JSON.parse(body.get("metadata") as string)).toBe(false);
+  });
+
+  it("includes the stations summary when given", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ id: "db-1", analysisId: "live_1" }), { status: 200 }),
+    );
+    const stations = {
+      schema: "esge10.v1" as const,
+      model_version: "lm-1.0.0",
+      display: true,
+      availability: "ok" as const,
+      status: Array(10).fill("unseen"),
+      manual: Array(10).fill(null),
+      auto_enabled: Array(10).fill(true),
+      observed_at_t: Array(10).fill(null),
+    };
+    await saveLiveAnalysis({ ...base, stations });
+    const body = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+    expect(JSON.parse(body.get("metadata") as string).stations).toEqual(stations);
+  });
+});
+
+describe("updateLiveStations", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("PATCHes the overrides as JSON", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ stations: {} }), { status: 200 }),
+    );
+    const patch = {
+      manual: ["confirmed", ...Array(9).fill(null)],
+      observed_at_t: [12, ...Array(9).fill(null)],
+    };
+    await updateLiveStations("live_abc", patch);
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("/api/analysis/live/live_abc/stations");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(init?.body as string)).toEqual(patch);
+  });
+
+  it("throws ApiError on failure", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response("nope", { status: 409 }));
+    await expect(
+      updateLiveStations("live_abc", { manual: [], observed_at_t: [] }),
+    ).rejects.toBeInstanceOf(ApiError);
   });
 });

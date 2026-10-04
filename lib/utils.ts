@@ -62,3 +62,24 @@ export function computeScoreStats(scores: number[]): {
     avgScore: Math.round(avg * 100) / 100,
   };
 }
+
+/**
+ * Round half to even ("banker's rounding"), matching Python's built-in round().
+ *
+ * The ML backend aggregates per-region scores with `round(sum(scores) / len(scores))`
+ * (ml-backend/app/ml/pipeline.py). Ties are common with small integer score sets
+ * (e.g. [2, 3] -> 2.5), and JS Math.round rounds half *up*, so using it here would
+ * make the live page and the batch results page disagree on the same video.
+ */
+export function roundHalfToEven(value: number): number {
+  const floor = Math.floor(value);
+  const diff = value - floor;
+  if (diff > 0.5) return floor + 1;
+  if (diff < 0.5) return floor;
+  return floor % 2 === 0 ? floor : floor + 1;
+}
+
+/** Mean PEACE score for a region, rounded the same way the batch pipeline does. */
+export function meanScore(scores: number[]): number {
+  return roundHalfToEven(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+}

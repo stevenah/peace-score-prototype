@@ -1,0 +1,7 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_pseudo_nbi",
+  "augment": {
+    "pseudo_nbi_p": 0.2
+  }
+}

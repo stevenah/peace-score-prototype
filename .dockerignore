@@ -3,3 +3,8 @@ node_modules
 .git
 *.db
 ml-backend
+data
+uploads
+.env*
+.docker-data
+**/*.mp4

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { StationsSummarySchema } from "@/lib/live/wire";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { filename, overallScore, minScore, maxScore, avgScore, framesAnalyzed, duration, timeline } =
+    const { filename, overallScore, minScore, maxScore, avgScore, framesAnalyzed, duration, timeline, stations } =
       JSON.parse(metadataRaw);
 
     if (!filename || typeof framesAnalyzed !== "number") {
@@ -32,6 +33,14 @@ export async function POST(request: NextRequest) {
         { error: "Missing required fields" },
         { status: 400 },
       );
+    }
+
+    // Optional ESGE station summary. A malformed one is dropped rather than
+    // failing the save: the PEACE record is what must not be lost.
+    const parsedStations =
+      stations === undefined ? null : StationsSummarySchema.safeParse(stations);
+    if (parsedStations && !parsedStations.success) {
+      console.warn("save-live: ignoring malformed stations summary");
     }
 
     const analysisId = `live_${crypto.randomUUID()}`;
@@ -61,6 +70,9 @@ export async function POST(request: NextRequest) {
         duration: typeof duration === "number" ? duration : null,
         timelineData: Array.isArray(timeline)
           ? JSON.stringify(timeline)
+          : null,
+        stationsData: parsedStations?.success
+          ? JSON.stringify(parsedStations.data)
           : null,
         videoPath,
         completedAt: new Date(),

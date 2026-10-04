@@ -13,13 +13,18 @@ primary_region = 'ams'
   PEACE_UPLOAD_DIR = '/data/uploads'
   PEACE_JOB_DB_PATH = '/data/jobs.db'
   PEACE_S3_REGION = 'us-east-1'
+  # ESGE landmark stations: off until the bundle passes its gates; then
+  # ENABLED='true' with DISPLAY='false' for the shadow study.
+  PEACE_LANDMARKS_ENABLED = 'false'
+  PEACE_LANDMARKS_DISPLAY = 'false'
+  PEACE_TORCH_THREADS = '2'
   # S3 secrets must be set via: fly secrets set PEACE_S3_BUCKET=... PEACE_AWS_ACCESS_KEY_ID=... PEACE_AWS_SECRET_ACCESS_KEY=...
 
 [http_service]
   internal_port = 8000
   force_https = true
   auto_stop_machines = 'stop'
-  auto_start_machines = false
+  auto_start_machines = true
   min_machines_running = 0
 
 [[vm]]

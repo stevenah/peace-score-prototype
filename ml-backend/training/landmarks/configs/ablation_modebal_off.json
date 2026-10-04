@@ -1,0 +1,7 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_modebal_off",
+  "data": {
+    "mode_balance": false
+  }
+}

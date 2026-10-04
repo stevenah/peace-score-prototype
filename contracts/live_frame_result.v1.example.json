@@ -1,0 +1,19 @@
+{
+  "type": "frame_result",
+  "timestamp": 1790000000.12,
+  "frame_index": 412,
+  "peace_score": {
+    "score": 2,
+    "label": "Adequate",
+    "confidence": 0.81,
+    "probs": [0.02, 0.1, 0.61, 0.27],
+    "region_confidence": 0.9
+  },
+  "motion": {
+    "direction": "stationary",
+    "confidence": 0.8,
+    "optical_flow_magnitude": 0.7
+  },
+  "region": "stomach",
+  "processing_time_ms": 131.4
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "esge10.v1",
+  "description": "ESGE upper-GI photodocumentation stations (Bisschops 2016; ESGE 2025 update), in the ESGE proposed photo order. Every per-station array on the wire (probs, stations, auto_enabled) uses this index order. Mirrored by ml-backend/app/ml/landmarks/stations.py and lib/live/stations.ts; tests on both sides assert they match this file.",
+  "stations": [
+    { "key": "esophagus_proximal", "esge": 1, "folder": "Proximal esophagus", "region": "esophagus", "label": "Proximal esophagus", "short": "Prox. esophagus" },
+    { "key": "esophagus_distal", "esge": 2, "folder": "Distal esophagus", "region": "esophagus", "label": "Distal esophagus", "short": "Dist. esophagus" },
+    { "key": "z_line", "esge": 3, "folder": "Z-line", "region": "esophagus", "label": "Z-line", "short": "Z-line" },
+    { "key": "duodenal_bulb", "esge": 4, "folder": "Duodenal bulb", "region": "duodenum", "label": "Duodenal bulb", "short": "Bulb" },
+    { "key": "duodenum_descending", "esge": 5, "folder": "Descending duodenum", "region": "duodenum", "label": "Descending duodenum", "short": "D2" },
+    { "key": "antrum", "esge": 6, "folder": "Antrum", "region": "stomach", "label": "Antrum", "short": "Antrum" },
+    { "key": "cardia_fundus_retroflex", "esge": 7, "folder": "Cardia, fundus inversion", "region": "stomach", "label": "Cardia & fundus (inversion)", "short": "Cardia/fundus" },
+    { "key": "lesser_curvature_retroflex", "esge": 8, "folder": "Lesser curvature", "region": "stomach", "label": "Lesser curvature (partial inversion)", "short": "Lesser curve" },
+    { "key": "incisura", "esge": 9, "folder": "Incisura angularis", "region": "stomach", "label": "Incisura angularis", "short": "Incisura" },
+    { "key": "corpus_greater_curvature", "esge": 10, "folder": "Gastric corpus", "region": "stomach", "label": "Gastric corpus (greater curvature)", "short": "Corpus" }
+  ]
+}

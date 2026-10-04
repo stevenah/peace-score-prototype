@@ -1,0 +1,44 @@
+name: Test
+
+# Runs on pull requests and on direct pushes to non-main branches. The deploy
+# workflow also calls it before shipping, so main never deploys untested code.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+  workflow_call:
+
+jobs:
+  frontend:
+    name: Frontend (vitest + tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: corepack enable && corepack prepare pnpm@11.21.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      - run: pnpm test
+      - run: pnpm exec tsc --noEmit
+
+  ml-backend:
+    name: ML backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      # CPU wheels, same pins as uv.lock and the production image. The default
+      # PyPI linux wheel drags in ~3 GB of CUDA libraries the tests never use.
+      - run: uv venv
+      - run: uv pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.10.*" "torchvision==0.25.*"
+      - run: uv pip install -e ".[dev]"
+      - run: uv run --no-sync pytest -m "not slow" -q

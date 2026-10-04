@@ -1,0 +1,15 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "sanity_unmasked",
+  "sanity": true,
+  "input": {
+    "masked": false,
+    "cache_root": "training/landmarks/cache/v1_unmasked"
+  },
+  "data": {
+    "k_frames": 4
+  },
+  "optim": {
+    "steps": 1500
+  }
+}

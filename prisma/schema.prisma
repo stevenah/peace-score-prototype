@@ -35,6 +35,8 @@ model AnalysisSession {
   framesAnalyzed Int?
   duration       Float?
   timelineData   String?
+  /// ESGE station summary (JSON) for live analyses; null when tracking never ran.
+  stationsData   String?
   videoPath      String?
   createdAt      DateTime  @default(now())
   completedAt    DateTime?

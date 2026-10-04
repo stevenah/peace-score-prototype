@@ -195,6 +195,12 @@ class RealPEACEClassifier(BasePEACEClassifier):
             "score": score_idx,
             "label": SCORE_LABELS[score_idx],
             "confidence": round(score_conf, 2),
+            # The full smoothed distribution and the region confidence were
+            # already computed here and thrown away. Both are cheap to carry and
+            # let the UI show a continuous expected score (sum i*p(i)) instead of
+            # a stepped integer, and gate readouts on how sure the model is.
+            "probs": [round(float(p), 4) for p in self._session.score_probs],
+            "region_confidence": round(float(region_conf), 2),
         }
 
 

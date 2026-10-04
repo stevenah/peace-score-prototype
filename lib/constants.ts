@@ -61,9 +61,3 @@ export const ALLOWED_VIDEO_TYPES = [
 
 export const MAX_FILE_SIZE_MB = 1024;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-
-
-export function getWsUrl(): string {
-  if (typeof window === "undefined") return "";
-  return process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api/v1/ws/live";
-}

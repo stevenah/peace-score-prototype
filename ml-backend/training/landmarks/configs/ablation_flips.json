@@ -1,0 +1,7 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_flips",
+  "augment": {
+    "hflip_p": 0.5
+  }
+}

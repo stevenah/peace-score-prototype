@@ -1,0 +1,31 @@
+{
+  "name": "stageB_regy32_endopos",
+  "candidate": "regy32_endopos",
+  "seed": 0,
+  "input": {
+    "size": 224,
+    "masked": true
+  },
+  "data": {
+    "k_frames": 8,
+    "clips_per_batch": 16
+  },
+  "ema": {
+    "decay": 0.995,
+    "warmup": true
+  },
+  "eval": {
+    "every_steps": 100,
+    "patience": 6
+  },
+  "loader": {
+    "workers": 8
+  },
+  "optim": {
+    "steps": 2000,
+    "warmup_steps": 100,
+    "lr_backbone": 0.0001,
+    "lr_head": 0.001,
+    "weight_decay": 0.05
+  }
+}

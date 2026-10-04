@@ -1,0 +1,134 @@
+{
+  "version": "gates-v1",
+  "status": "draft: freeze (set frozen=true and commit) BEFORE any Stage B result exists, after `evaluate.py --ci-sim` on OOF",
+  "frozen": false,
+  "stations_schema": "esge10.v1",
+  "merged_hierarchy": {
+    "esophagus_body": ["esophagus_proximal", "esophagus_distal"],
+    "lc_incisura": ["lesser_curvature_retroflex", "incisura"]
+  },
+  "populations": {
+    "clip": "usable, primary-evaluation clips (no contested/combo/quarantined); clip label = argmax of mean log-prob over quality-passing frames with u in [0.2, 0.8] (all frames if none pass)",
+    "frame_calibration": "quality-passing frames of primary clips with u in [0.1, 0.9], after the cross-fit temperature",
+    "ci": "patient-cluster bootstrap, 2000 resamples (group bootstrap reported alongside); Wilson for single proportions"
+  },
+  "G-DATA": {
+    "blocking": true,
+    "checks": [
+      "folds --verify passes (no group, md5 or near-duplicate group in two splits; no full-length rows)",
+      "derive_layouts static scan passes",
+      "every model input is exactly 0 outside the aperture mask (augment.assert_batch_masked in train.py, tests)",
+      "badge boxes are 0 in model inputs"
+    ]
+  },
+  "G-PIPELINE": {
+    "blocking": true,
+    "what": "label-permutation run (configs/sanity_perm.json, fold 0): a pipeline-bug test, not a leakage test",
+    "max_clip_macro_f1": 0.15
+  },
+  "G-LEAK": {
+    "blocking": true,
+    "checks": [
+      "leak_audit.py passes: no cross-split pair above T_dup (embeddings) and no cross-split pair under the gain-invariant dHash near-duplicate rule",
+      "required planted controls are caught: the re-exported copy (embedding), the 2 px shift + JPEG q75 + 3% gain copy (embedding OR dHash rule) and every known re-encode (embedding)"
+    ]
+  },
+  "G-MODEL": {
+    "blocking": true,
+    "level": "merged_hierarchy (8 nodes)",
+    "min_clip_macro_f1": 0.85,
+    "min_clip_macro_f1_lower_ci": 0.8,
+    "min_node_recall": 0.7,
+    "max_ece": 0.05,
+    "on_failure": "NO-GO (landmarks computed and logged with display=false)"
+  },
+  "G-SHORTCUT": {
+    "blocking": true,
+    "max_nbi_effect": 0.05,
+    "nbi_effect": "P(oesophageal region | NBI frame) - P(oesophageal region | WL frame) for NON-oesophageal true stations, stratified by true station (weights min(n_wl, n_nbi)), quality-passing frames",
+    "max_mode_switch_effect": 0.05,
+    "mode_switch_effect": "paired within-clip mean difference NBI minus WL frames of P(oesophageal region), mixed-mode non-oesophageal clips",
+    "max_cap_effect": 0.05,
+    "cap_effect": "P(z_line | cap, true station != z_line) - P(z_line | no cap, true station != z_line), stratified by true station",
+    "positive_control": "a fold-0 model trained on UNMASKED canvases (configs/sanity_unmasked.json) must exceed at least one of the limits above, or the badge-paste counterfactual effect must exceed 0.05",
+    "on_failure": "remediate (grayscale p=0.3, gradient-reversal mode head) and re-run; else NO-GO"
+  },
+  "G-STATION": {
+    "blocking": false,
+    "min_clip_precision": 0.9,
+    "min_clip_precision_lower_ci": 0.8,
+    "min_clip_recall": 0.75,
+    "max_s4_fdr": 0.1,
+    "per_mode_stations": ["esophagus_proximal", "esophagus_distal"],
+    "per_mode": {
+      "min_recall_nbi": 0.75,
+      "min_recall_wl_lower_ci": 0.5,
+      "wl_level": "patient: one vote per patient (>= half of their WL clips of the station right), Wilson lower bound over patients",
+      "note": "WL oesophagus is scarce (dev WL proximal ~7 patients): the bound needs 7/7 at n=7 (6/7 -> 0.487), 8/9 at n=9, 12/15 at n=15. Serving has ONE auto_enabled flag per station, so a WL failure makes the station manual-only in NBI too; gates_result.json also records auto_enabled_by_mode for a future mode-aware tracker."
+    },
+    "on_failure": "auto_enabled[k] = false: candidate display plus manual tick only",
+    "s4_fdr_source": "tune_tracker nested held-out replay (tuned tracker and thresholds per outer fold), station ENABLED: heldout_pooled.S4.fdr_per_station_if_enabled",
+    "nested": "tune_tracker recomputes auto_enabled per outer fold k from these criteria on the folds != k (critic C4); the shipped auto_enabled is evaluate --report on all dev OOF"
+  },
+  "G-STREAM": {
+    "blocking": true,
+    "evaluated_on": "dev OOF, nested tracker tuning (tune_tracker.py held-out folds) on the SHIPPED station set: auto_enabled recomputed per outer fold and applied (disabled stations count in no stream metric); transit frames classified by the fold models (transit_source=model)",
+    "min_s2_recall_mean": 0.9,
+    "min_s2_recall_each": 0.8,
+    "max_s4_fdr_overall": 0.05,
+    "max_tto_median_s": 3.0,
+    "min_within_clip": 0.9,
+    "min_transit_abstention": 0.8,
+    "min_best_frame_purity": 0.97,
+    "max_s5_recall_drop": 0.02,
+    "on_failure": "retune on dev only: tune_tracker --disable <station> (the station with the worst held-out S4 FDR or recall first, one at a time; recorded as force_disabled) until G-STREAM passes on the shipped station set; if no non-empty station set passes: NO-GO"
+  },
+  "G-TEST": {
+    "blocking": true,
+    "touched_once": true,
+    "primary_endpoints": {
+      "clip_macro_f1": {"direction": "higher", "non_inferiority_margin": 0.05, "reference": "dev OOF point estimate"},
+      "s4_fdr_overall": {"direction": "lower", "non_inferiority_margin": 0.03, "reference": "dev OOF point estimate", "absolute_max": 0.1},
+      "recall_mean": {"direction": "higher", "non_inferiority_margin": 0.05, "reference": "dev OOF point estimate (S2)"}
+    },
+    "descriptive_only": [
+      "per-station metrics",
+      "ECE/NLL/Brier",
+      "time-to-observe",
+      "flicker",
+      "best-frame purity",
+      "per mode/cap/room breakdowns"
+    ],
+    "ece_fallback": {
+      "max_ece": 0.05,
+      "fallback_model": "the fold model with the MEDIAN inner-val clip macro-F1, with its own cross-fit calibration; its test result is reported as a pre-named second look"
+    },
+    "no_retuning_on_test": true,
+    "protocol": {
+      "transit": "model: the final all-dev model classifies the synthetic transit frames at the shipped T; must equal tracker.json transit_source, otherwise nothing is scored (evaluate.check_test_protocol)",
+      "auto_enabled": "the shipped auto_enabled (gates_result.json); references are tracker.json heldout_pooled (same station set rules)",
+      "ci_simulation": "evaluate --ci-sim resamples test-sized patient sets WITH replacement from dev OOF"
+    }
+  },
+  "G-SHIFT": {
+    "informational": true,
+    "min_clip_macro_f1": 0.7,
+    "investigate_below": 0.6,
+    "note": "legacy 1350 cohort stays unsupported_layout in serving regardless"
+  },
+  "G-SERVE": {
+    "blocking": true,
+    "landmark_p95_ms": 150,
+    "frame_p95_ms": 350,
+    "frame_p99_ms": 500,
+    "p95_drift_max_ratio": 1.2,
+    "parity": {"min_top1_agreement": 0.99, "max_mean_abs_dp": 0.02},
+    "note": "measured in I1 (bench.py sustained on staging with drained burst credit; tests/test_landmark_parity.py)"
+  },
+  "outcomes": {
+    "computed_by": "evaluate.outcome -> gates_result.json 'outcome' (PENDING while a blocking gate has not run)",
+    "GO": "all blocking gates pass (G-STREAM included) and every G-STATION-k passes",
+    "PARTIAL": "all blocking gates pass, with G-STREAM measured on the shipped station set (per-fold auto_enabled plus any dev-only --disable retune); >= 1 station auto-enabled; the failed G-STATION-k stations are manual-only (auto_enabled=false)",
+    "NO-GO": "a blocking gate fails, or no station is auto-enabled: shadow logging only"
+  }
+}

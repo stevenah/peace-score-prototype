@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PEACE_SCORE_LABELS } from "@/lib/constants";
+import { parseStationsData } from "@/lib/live/wire";
 import type { PeaceScore } from "@/lib/types";
 
 export async function GET(
@@ -31,6 +32,7 @@ export async function GET(
     const timeline = session.timelineData
       ? JSON.parse(session.timelineData)
       : [];
+    const stations = parseStationsData(session.stationsData);
 
     return NextResponse.json({
       analysis_id: session.analysisId,
@@ -61,6 +63,7 @@ export async function GET(
       video_url: session.videoPath
         ? `/api/video/${session.analysisId}`
         : null,
+      ...(stations ? { stations } : {}),
       created_at: session.createdAt.toISOString(),
       completed_at: session.completedAt?.toISOString(),
     });

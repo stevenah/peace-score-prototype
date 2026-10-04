@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Header } from "@/components/layout/Header";
+import { AppShell } from "@/components/layout/AppShell";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
@@ -38,8 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <Header />
-            <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+            <AppShell>{children}</AppShell>
           </SessionProvider>
         </ThemeProvider>
       </body>

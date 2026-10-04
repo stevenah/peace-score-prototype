@@ -6,8 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   deploy-frontend:
     name: Deploy Frontend
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,6 +22,7 @@ jobs:
 
   deploy-ml-backend:
     name: Deploy ML Backend
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -1,0 +1,11 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "sanity_perm",
+  "sanity": true,
+  "data": {
+    "permute_labels": true
+  },
+  "optim": {
+    "steps": 1000
+  }
+}

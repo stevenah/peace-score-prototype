@@ -63,3 +63,13 @@ prisma/dev.db-journal
 *.db
 dataset/
 *.egg*
+
+# patient data — NEVER commit (repo is public). Clinical video with burned-in
+# dates/scope serials, and every artefact derived from it.
+/data/
+**/*.mp4
+**/*.mov
+ml-backend/runs/
+ml-backend/training/landmarks/cache/
+ml-backend/app/models/landmarks/*
+!ml-backend/app/models/landmarks/BUNDLE.lock

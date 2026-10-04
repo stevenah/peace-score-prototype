@@ -1,0 +1,36 @@
+{
+  "type": "frame_result",
+  "timestamp": 1790000000.12,
+  "frame_index": 412,
+  "peace_score": {
+    "score": 2,
+    "label": "Adequate",
+    "confidence": 0.81,
+    "probs": [0.02, 0.1, 0.61, 0.27],
+    "region_confidence": 0.9
+  },
+  "motion": {
+    "direction": "stationary",
+    "confidence": 0.8,
+    "optical_flow_magnitude": 0.7
+  },
+  "region": "stomach",
+  "processing_time_ms": 131.4,
+  "landmark": {
+    "schema": "esge10.v1",
+    "model_version": "lm-1.0.0",
+    "display": true,
+    "status": "ok",
+    "layout": "olympus_1920x1080",
+    "mode": "wl",
+    "probs": [0.001, 0.002, 0.004, 0.01, 0.006, 0.912, 0.011, 0.02, 0.031, 0.003],
+    "top": "antrum",
+    "confidence": 0.912,
+    "quality": 0.82,
+    "current": "antrum",
+    "stations": ["observed", "observed", "observed", "observed", "observed", "observed", "candidate", "unseen", "unseen", "unseen"],
+    "auto_enabled": [true, true, true, true, true, true, true, true, true, true],
+    "events": { "observed": ["antrum"], "best_frame": ["antrum"] },
+    "landmark_ms": 38.2
+  }
+}

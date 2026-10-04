@@ -6,6 +6,7 @@ import io
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from app.api.schemas import AnalysisStatus
@@ -86,6 +87,13 @@ def test_analyze_frame_without_previous_has_stationary_motion(client):
 # -- Analyze video (upload) --------------------------------------------------
 
 
+_VIDEO_ROUTE_REMOVED = pytest.mark.xfail(
+    strict=True,
+    reason="/api/v1/analyze/video was removed; uploads now go through /analyze/s3",
+)
+
+
+@_VIDEO_ROUTE_REMOVED
 def test_analyze_video_upload_accepted(client, upload_dir):
     """A valid video upload should return a queued job."""
     # Create a tiny but valid mp4-like payload (the endpoint accepts it by extension)
@@ -102,6 +110,7 @@ def test_analyze_video_upload_accepted(client, upload_dir):
     assert "analysis_id" in body
 
 
+@_VIDEO_ROUTE_REMOVED
 def test_analyze_video_rejects_bad_type(client):
     resp = client.post(
         "/api/v1/analyze/video",
@@ -128,3 +137,54 @@ def test_get_analysis_returns_job(client, store):
     body = resp.json()
     assert body["analysis_id"] == job_id
     assert body["status"] == AnalysisStatus.QUEUED.value
+
+
+# -- Health: model and landmark load state -------------------------------------
+
+
+def test_health_reports_landmarks_off_by_default(client):
+    body = client.get("/api/v1/health").json()
+    assert body["landmarks_loaded"] is False
+    assert body["landmark_model_version"] is None
+    assert body["models_loaded"] is True  # mock models
+
+
+def test_health_reports_mock_landmarks(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "landmarks_enabled", True)
+    body = client.get("/api/v1/health").json()
+    assert body["landmarks_loaded"] is True
+    assert body["landmark_model_version"] == "mock-esge10-1"
+
+
+def test_health_reports_real_load_state(client, monkeypatch, tiny_bundle):
+    from app.config import settings
+    from app.ml.landmarks.classifier import LandmarkModelManager
+    from app.ml.real_models import ModelManager
+
+    monkeypatch.setattr(settings, "use_mock_models", False)
+    monkeypatch.setattr(settings, "landmarks_enabled", True)
+    monkeypatch.setattr(ModelManager, "_instance", None)
+    body = client.get("/api/v1/health").json()
+    assert body["models_loaded"] is False and body["landmarks_loaded"] is False
+
+    LandmarkModelManager.get_instance(bundle_dir=tiny_bundle, device="cpu")
+    body = client.get("/api/v1/health").json()
+    assert body["landmarks_loaded"] is True and body["landmark_model_version"] == "lm-0.0.1"
+
+
+def test_lifespan_warms_up_before_starting_the_worker(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    import app.main as main_mod
+    from app.config import settings
+
+    order = []
+    monkeypatch.setattr(settings, "warmup_models", True)
+    monkeypatch.setattr(main_mod, "warm_up_models", lambda: order.append("warmup") or {})
+    monkeypatch.setattr(main_mod.worker, "start", lambda: order.append("worker"))
+    monkeypatch.setattr(main_mod.worker, "stop", lambda: None)
+    with TestClient(main_mod.app):
+        pass
+    assert order == ["warmup", "worker"]

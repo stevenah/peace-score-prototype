@@ -1,0 +1,598 @@
+{
+  "manifest_version": "v1",
+  "schema": "esge10.v1",
+  "layouts_version": "lay-2",
+  "preprocess_version": "lmpre-1",
+  "n_rows": 1697,
+  "n_usable": 1620,
+  "n_soft_label": 26,
+  "n_eval_exclude": 103,
+  "exclude_reason": {
+    "combo": 8,
+    "dup_exact": 56,
+    "dup_near": 3,
+    "id_uncertain": 3,
+    "quarantine_suffix_mismatch": 4,
+    "too_short": 3,
+    "usable": 1620
+  },
+  "n_patients_by_split": {
+    "dev": 72,
+    "shift": 7,
+    "test": 19
+  },
+  "usable_by_class_split": {
+    "esophagus_proximal": {
+      "dev": 116,
+      "shift": 12,
+      "test": 30
+    },
+    "esophagus_distal": {
+      "dev": 82,
+      "shift": 13,
+      "test": 24
+    },
+    "z_line": {
+      "dev": 185,
+      "shift": 9,
+      "test": 43
+    },
+    "duodenal_bulb": {
+      "dev": 91,
+      "shift": 13,
+      "test": 20
+    },
+    "duodenum_descending": {
+      "dev": 88,
+      "shift": 10,
+      "test": 24
+    },
+    "antrum": {
+      "dev": 118,
+      "shift": 32,
+      "test": 32
+    },
+    "cardia_fundus_retroflex": {
+      "dev": 114,
+      "shift": 21,
+      "test": 30
+    },
+    "lesser_curvature_retroflex": {
+      "dev": 73,
+      "shift": 22,
+      "test": 18
+    },
+    "incisura": {
+      "dev": 100,
+      "shift": 10,
+      "test": 23
+    },
+    "corpus_greater_curvature": {
+      "dev": 193,
+      "shift": 26,
+      "test": 48
+    }
+  },
+  "usable_by_class_split_mode_cohort": [
+    {
+      "label": "esophagus_proximal",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "esophagus_proximal",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 107
+    },
+    {
+      "label": "esophagus_proximal",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 7
+    },
+    {
+      "label": "esophagus_proximal",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 12
+    },
+    {
+      "label": "esophagus_proximal",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 28
+    },
+    {
+      "label": "esophagus_proximal",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 71
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 11
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 13
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 20
+    },
+    {
+      "label": "esophagus_distal",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 3
+    },
+    {
+      "label": "z_line",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 10
+    },
+    {
+      "label": "z_line",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 125
+    },
+    {
+      "label": "z_line",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 50
+    },
+    {
+      "label": "z_line",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 8
+    },
+    {
+      "label": "z_line",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 1
+    },
+    {
+      "label": "z_line",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "z_line",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 29
+    },
+    {
+      "label": "z_line",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 12
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 5
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 84
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 13
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "duodenal_bulb",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 19
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 5
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 82
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 10
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "duodenum_descending",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 22
+    },
+    {
+      "label": "antrum",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 53
+    },
+    {
+      "label": "antrum",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 65
+    },
+    {
+      "label": "antrum",
+      "split": "shift",
+      "mode": "mixed",
+      "cohort": "legacy_1350",
+      "n": 4
+    },
+    {
+      "label": "antrum",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 14
+    },
+    {
+      "label": "antrum",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 14
+    },
+    {
+      "label": "antrum",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "antrum",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 13
+    },
+    {
+      "label": "antrum",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 18
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 2
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 35
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 77
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "shift",
+      "mode": "mixed",
+      "cohort": "legacy_1350",
+      "n": 2
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 5
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 14
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 13
+    },
+    {
+      "label": "cardia_fundus_retroflex",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 16
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 1
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 27
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 45
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "shift",
+      "mode": "mixed",
+      "cohort": "legacy_1350",
+      "n": 1
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 9
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 12
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 7
+    },
+    {
+      "label": "lesser_curvature_retroflex",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 11
+    },
+    {
+      "label": "incisura",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 10
+    },
+    {
+      "label": "incisura",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 43
+    },
+    {
+      "label": "incisura",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 47
+    },
+    {
+      "label": "incisura",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 2
+    },
+    {
+      "label": "incisura",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 8
+    },
+    {
+      "label": "incisura",
+      "split": "test",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 3
+    },
+    {
+      "label": "incisura",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 9
+    },
+    {
+      "label": "incisura",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 11
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "dev",
+      "mode": "mixed",
+      "cohort": "new_1920",
+      "n": 3
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "dev",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 58
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "dev",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 132
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "shift",
+      "mode": "mixed",
+      "cohort": "legacy_1350",
+      "n": 2
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "shift",
+      "mode": "nbi",
+      "cohort": "legacy_1350",
+      "n": 5
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "shift",
+      "mode": "wl",
+      "cohort": "legacy_1350",
+      "n": 19
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "test",
+      "mode": "nbi",
+      "cohort": "new_1920",
+      "n": 12
+    },
+    {
+      "label": "corpus_greater_curvature",
+      "split": "test",
+      "mode": "wl",
+      "cohort": "new_1920",
+      "n": 36
+    }
+  ],
+  "flags": {
+    "cap_by_patient": 28,
+    "combo": 10,
+    "contested": 26,
+    "dup_near": 3,
+    "frozen": 7,
+    "suffix_ambiguous": 1,
+    "time_overlap_other_label": 52
+  }
+}

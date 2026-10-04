@@ -38,7 +38,36 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
 
+    # --- ESGE landmark stations (app/ml/landmarks) ---
+    # Off by default. Shadow mode = enabled but not displayed: the backend
+    # computes and logs stations, the UI shows nothing (fail-safe default).
+    landmarks_enabled: bool = False
+    landmarks_display: bool = False
+    # Committed pin {version, s3_key, sha256} of the private-S3 bundle tarball.
+    landmark_bundle_lock: str = str(_APP_DIR / "models" / "landmarks" / "BUNDLE.lock")
+    # Where fetched bundles are unpacked (the Fly volume); falls back to a temp
+    # dir when not writable (e.g. local dev).
+    landmark_cache_dir: str = "/data/models/landmarks"
+    # Local dev/tests only: serve this unpacked bundle dir, bypassing the lock.
+    landmark_bundle_dir: str = ""
+    # Classify every Nth live frame (skipped frames do not enter the tracker).
+    landmark_every_n: int = 1
+
+    # --- Serving resources ---
+    torch_threads: int = 2
+    max_live_sockets: int = 4
+    # Load and run one dummy forward of each real model at startup, before the
+    # batch worker starts (no-op with mock models).
+    warmup_models: bool = True
+
     model_config = {"env_prefix": "PEACE_"}
+
+    def public_summary(self) -> dict:
+        """Effective settings for the startup log, without credentials."""
+        hidden = {"aws_access_key_id", "aws_secret_access_key"}
+        out = {k: v for k, v in self.model_dump().items() if k not in hidden}
+        out["aws_credentials_set"] = bool(self.aws_access_key_id and self.aws_secret_access_key)
+        return out
 
 
 settings = Settings()

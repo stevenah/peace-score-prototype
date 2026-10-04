@@ -1,0 +1,7 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_288",
+  "input": {
+    "size": 288
+  }
+}

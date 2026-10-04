@@ -1,0 +1,8 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_rot360",
+  "augment": {
+    "rotate_deg": 180.0,
+    "rotate_p": 1.0
+  }
+}

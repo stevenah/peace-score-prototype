@@ -1,0 +1,9 @@
+{
+  "name": "smoke",
+  "candidate": "effb0_in1k",
+  "seed": 0,
+  "input": {
+    "size": 224,
+    "masked": true
+  }
+}

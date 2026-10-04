@@ -9,7 +9,6 @@ import {
   ALLOWED_VIDEO_TYPES,
   MAX_FILE_SIZE_MB,
   MAX_FILE_SIZE_BYTES,
-  getWsUrl,
 } from "@/lib/constants";
 import type { PeaceScore } from "@/lib/types";
 
@@ -95,13 +94,5 @@ describe("constants integrity", () => {
 
   it("MAX_FILE_SIZE_BYTES equals MB * 1024 * 1024", () => {
     expect(MAX_FILE_SIZE_BYTES).toBe(MAX_FILE_SIZE_MB * 1024 * 1024);
-  });
-});
-
-describe("getWsUrl", () => {
-  it("returns fallback URL in node/test environment", () => {
-    // In jsdom, window exists but NEXT_PUBLIC_WS_URL is not set
-    const url = getWsUrl();
-    expect(url).toBe("ws://localhost:8000/api/v1/ws/live");
   });
 });

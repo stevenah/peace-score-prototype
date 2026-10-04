@@ -7,7 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir ".[ml]"
+# CPU-only torch, pinned to the versions in uv.lock. The default PyPI linux
+# wheel is the CUDA build (GBs of unused libraries, slow cold starts) and an
+# unpinned install lets serving drift from what the models were trained with.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        "torch==2.10.*" "torchvision==0.25.*" \
+    && pip install --no-cache-dir ".[ml]"
 
 COPY app/ app/
 

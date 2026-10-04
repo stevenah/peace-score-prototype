@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Python side: its virtualenv ships third-party JS (e.g. matplotlib).
+    "ml-backend/**",
   ]),
 ]);
 

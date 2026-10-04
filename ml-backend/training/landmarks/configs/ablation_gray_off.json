@@ -1,0 +1,7 @@
+{
+  "base": "stageB_regy32_in1k",
+  "name": "ablation_gray_off",
+  "augment": {
+    "gray_p": 0.0
+  }
+}

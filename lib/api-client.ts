@@ -1,4 +1,9 @@
-import type { AnalysisResponse, FrameAnalysisResponse } from "./types";
+import type {
+  AnalysisResponse,
+  FrameAnalysisResponse,
+  ManualStationMark,
+  StationsSummary,
+} from "./types";
 
 const API_BASE = "/api";
 
@@ -131,6 +136,8 @@ export async function saveLiveAnalysis(data: {
   framesAnalyzed: number;
   duration: number | null;
   timeline: unknown[];
+  /** ESGE station summary; omitted when stations were never available. */
+  stations?: StationsSummary;
   videoFile?: File;
 }): Promise<{ id: string; analysisId: string }> {
   const formData = new FormData();
@@ -145,6 +152,7 @@ export async function saveLiveAnalysis(data: {
       framesAnalyzed: data.framesAnalyzed,
       duration: data.duration,
       timeline: data.timeline,
+      ...(data.stations ? { stations: data.stations } : {}),
     }),
   );
   if (data.videoFile) {
@@ -158,10 +166,26 @@ export async function saveLiveAnalysis(data: {
   return handleResponse(response);
 }
 
-export function createLiveWebSocket(): WebSocket {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}//${window.location.host}/api/live`;
-  return new WebSocket(wsUrl);
+/**
+ * Persists station overrides made after a live analysis was saved — the save
+ * happens when the video ends, which is exactly when the clinician starts
+ * reviewing the checklist.
+ */
+export async function updateLiveStations(
+  analysisId: string,
+  patch: {
+    manual: ManualStationMark[];
+    observed_at_t: (number | null)[];
+  },
+): Promise<{ stations: StationsSummary }> {
+  const response = await fetch(
+    `${API_BASE}/analysis/live/${encodeURIComponent(analysisId)}/stations`,
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    },
+  );
+  return handleResponse(response);
 }
-
 export { ApiError };

@@ -27,6 +27,32 @@
   --color-border: var(--border);
   --color-clinical-blue: var(--clinical-blue);
   --color-clinical-blue-light: var(--clinical-blue-light);
+
+  /* PEACE scale — as tokens, so fill-/stroke-/text- utilities and alpha
+     modifiers all work. The raw hex map in lib/constants.ts stays for the
+     light-theme pages. */
+  --color-peace-0: var(--peace-0);
+  --color-peace-1: var(--peace-1);
+  --color-peace-2: var(--peace-2);
+  --color-peace-3: var(--peace-3);
+  --color-peace-idle: var(--peace-idle);
+
+  /* Workstation surfaces + ink */
+  --color-ws-void: var(--ws-void);
+  --color-ws-surface: var(--ws-surface);
+  --color-ws-raised: var(--ws-raised);
+  --color-ws-line: var(--ws-line);
+  --color-ws-fg: var(--ws-fg);
+  --color-ws-fg-2: var(--ws-fg-2);
+  --color-ws-label: var(--ws-label);
+  --color-ws-faint: var(--ws-faint);
+
+  /* Workstation semantics */
+  --color-ws-coach: var(--ws-coach);
+  --color-ws-alert: var(--ws-alert);
+  --color-ws-detect: var(--ws-detect);
+  --color-ws-organ: var(--ws-organ);
+  --color-ws-organ-idle: var(--ws-organ-idle);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -140,4 +166,156 @@
 @keyframes flash-red-bg {
   0%, 100% { background-color: rgb(239 68 68 / 0); }
   50% { background-color: rgb(239 68 68 / 0.15); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Endoscopy workstation: an always-dark device palette.
+
+   Scoped to [data-workstation] and placed after .dark deliberately. Because
+   these custom properties are declared ON the workstation element, they beat
+   the values inherited from <html>, so the subtree is immune to the user's
+   theme without touching next-themes. Pair the attribute with class="dark" so
+   dark: variants (a descendant selector) also resolve inside.
+   ───────────────────────────────────────────────────────────────────────── */
+[data-workstation] {
+  color-scheme: dark;
+
+  /* Surfaces. Void is exactly #000 so the video letterbox is invisible against
+     the app background and the endoscopic field appears to float. */
+  --ws-void: oklch(0 0 0);
+  --ws-surface: oklch(0.145 0 0);
+  --ws-raised: oklch(0.195 0 0);
+  --ws-line: oklch(0.265 0 0);
+
+  /* Ink ramp, measured against #000 */
+  --ws-fg: oklch(0.97 0 0);        /* 19.4:1 hero numerals */
+  --ws-fg-2: oklch(0.875 0 0);     /* 14.4:1 values, timers */
+  --ws-label: oklch(0.63 0 0);     /*  5.9:1 labels — AA at 13px */
+  --ws-faint: oklch(0.45 0 0);     /*  2.8:1 resting glyphs, decorative only */
+
+  /* PEACE 0-3. Warm = attention, cool = acceptable, so the 1|2 boundary — the
+     one that carries the alert decision — is the most separable pair, including
+     under red-green colour vision deficiency. */
+  --peace-0: oklch(0.66 0.215 25);
+  --peace-1: oklch(0.795 0.155 72);
+  --peace-2: oklch(0.765 0.115 205);
+  --peace-3: oklch(0.86 0.185 148);
+  --peace-idle: oklch(0.4 0 0);
+
+  --ws-coach: oklch(0.845 0.145 80);
+  --ws-alert: oklch(0.66 0.215 25);
+  --ws-detect: oklch(0.72 0.15 240);
+  --ws-organ: oklch(0.78 0.13 45);
+  --ws-organ-idle: oklch(0.3 0 0);
+
+  /* Remap the shadcn contract so existing primitives obey the device palette. */
+  --background: var(--ws-void);
+  --foreground: var(--ws-fg);
+  --card: var(--ws-surface);
+  --card-foreground: var(--ws-fg);
+  --popover: var(--ws-raised);
+  --popover-foreground: var(--ws-fg);
+  --muted: var(--ws-raised);
+  --muted-foreground: var(--ws-label);
+  --secondary: var(--ws-raised);
+  --secondary-foreground: var(--ws-fg-2);
+  --accent: var(--ws-raised);
+  --accent-foreground: var(--ws-fg);
+  --border: var(--ws-line);
+  --input: var(--ws-line);
+  --ring: var(--ws-detect);
+  --primary: var(--ws-detect);
+  --primary-foreground: oklch(0.16 0 0);
+  --destructive: var(--ws-alert);
+  --clinical-blue: var(--ws-detect);
+  --clinical-blue-light: var(--ws-raised);
+
+  /* Flat device: no rounded corners anywhere. */
+  --radius: 0px;
+}
+
+/* Video stage: container-query sizing makes the wrapper exactly the video's
+   content box, so an overlay pinned to inset-0 is pixel-accurate without a
+   ResizeObserver. --ar must be a unitless number; calc() cannot take "16/9". */
+.ws-stage {
+  container-type: size;
+}
+.ws-fit {
+  --ar: 1.7778;
+  width: min(100cqw, calc(100cqh * var(--ar)));
+  height: min(100cqh, calc(100cqw / var(--ar)));
+}
+
+/* Rail typography. Mono numerals so digits do not shift horizontally as timers
+   tick — proportional digits read as instability on an instrument. */
+[data-workstation] .ws-label {
+  font-size: 13px;
+  line-height: 1.15;
+  font-weight: 400;
+  color: var(--ws-label);
+}
+[data-workstation] .ws-num-xl {
+  font-family: var(--font-mono);
+  font-weight: 300;
+  font-size: clamp(3rem, 4.6vw, 4.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.035em;
+  color: var(--ws-fg);
+  font-variant-numeric: tabular-nums;
+}
+[data-workstation] .ws-num-lg {
+  font-family: var(--font-mono);
+  font-weight: 300;
+  font-size: clamp(1.75rem, 2.2vw, 2.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  color: var(--ws-fg-2);
+  font-variant-numeric: tabular-nums;
+}
+[data-workstation] .ws-num-md {
+  font-family: var(--font-mono);
+  font-weight: 300;
+  font-size: clamp(1.375rem, 1.8vw, 1.875rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+[data-workstation] .ws-value {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+[data-workstation] .ws-micro {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ws-label);
+}
+
+/* One-shot wash when an alert first appears. Never loops: a repeating flash over
+   live mucosa induces afterimages in a dark-adapted eye and masks the very
+   tissue the alert is pointing at. */
+@keyframes ws-alert-wash {
+  from {
+    box-shadow: inset 0 0 0 9999px oklch(1 0 0 / 0.28);
+  }
+  to {
+    box-shadow: inset 0 0 0 9999px oklch(1 0 0 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-workstation],
+  [data-workstation] *,
+  [data-workstation] *::before,
+  [data-workstation] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
