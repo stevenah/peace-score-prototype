@@ -3,6 +3,7 @@
        db-push db-generate db-studio \
        docker-up docker-down docker-build \
        db-up minio-up infra-up infra-down bootstrap \
+       train-landmarks train-landmarks-results \
        clean
 
 # -------------------------------------------------------------------
@@ -44,6 +45,16 @@ test-web-watch: ## Run frontend tests in watch mode
 
 test-ml: ## Run ML backend tests (pytest)
 	cd ml-backend && uv run pytest
+
+# -------------------------------------------------------------------
+# Landmark model training (GPU box; targets live in ml-backend/Makefile)
+# -------------------------------------------------------------------
+
+train-landmarks: ## Fine-tune all landmark candidates on all dev folds (resumable)
+	$(MAKE) -C ml-backend train
+
+train-landmarks-results: ## Held-out clip macro-F1 per candidate and fold
+	$(MAKE) -C ml-backend train-results
 
 # -------------------------------------------------------------------
 # Lint & Typecheck
