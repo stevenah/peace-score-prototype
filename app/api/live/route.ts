@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { signLiveToken } from "@/lib/ml-backend";
 
 function getWsUrlForBrowser(): string {
-  // NEXT_PUBLIC_WS_URL is the fully-formed browser-reachable WebSocket URL and
-  // takes precedence when set (it is what fly.toml configures in production).
-  // ML_BACKEND_PUBLIC_URL is the http(s) origin fallback for local/docker setups.
+  // ML_BACKEND_PUBLIC_URL is the browser-reachable http(s) origin of the ML
+  // backend. NEXT_PUBLIC_WS_URL, when set, overrides it with a fully-formed
+  // WebSocket URL.
   // ML_BACKEND_URL is the Docker-internal address and must NOT be sent to the browser.
   const explicitWsUrl = process.env.NEXT_PUBLIC_WS_URL;
   if (explicitWsUrl) return explicitWsUrl;
@@ -22,7 +23,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const wsUrl = getWsUrlForBrowser();
+  const token = signLiveToken();
+
   return NextResponse.json({
-    ws_url: getWsUrlForBrowser(),
+    ws_url: token ? `${wsUrl}?token=${token}` : wsUrl,
   });
 }

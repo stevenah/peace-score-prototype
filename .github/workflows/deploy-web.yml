@@ -1,0 +1,35 @@
+name: Deploy web
+
+# Ships peace-frontend when anything outside the ML backend changes.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "ml-backend/**"
+      - "**.md"
+      - ".github/workflows/deploy-ml.yml"
+  workflow_dispatch:
+
+# One deploy of this app at a time; a newer push queues behind it.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      only: web
+
+  deploy:
+    name: Deploy peace-frontend
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # --ha=false keeps this at one machine; Fly's default when it has to
+      # create machines for a service is two.
+      - run: flyctl deploy --remote-only --yes --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

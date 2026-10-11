@@ -1,4 +1,5 @@
-FROM node:20-alpine AS base
+# pnpm 11 needs Node >= 22.13. Keep in step with .github/workflows/test.yml.
+FROM node:22-alpine AS base
 
 WORKDIR /app
 
@@ -21,24 +22,18 @@ CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec next dev --hostna
 
 # --- Prod stage: build and serve ---
 FROM base AS prod
-ENV NEXTAUTH_SECRET=build-placeholder
-RUN pnpm build
+# Auth.js needs a secret to exist while Next collects page data. It is set for
+# this command only, so the image carries no default and fails closed if the
+# real secret is ever missing at runtime.
+RUN NEXTAUTH_SECRET=build-placeholder pnpm build
 
-# Copy standalone output and static/public assets
-RUN cp -r .next/standalone/. ./standalone/
-RUN cp -r .next/static ./standalone/.next/static
-RUN cp -r public ./standalone/public 2>/dev/null || true
-RUN cp docker-entrypoint.sh ./standalone/
-RUN cp -r prisma ./standalone/prisma
-RUN cp prisma.config.ts ./standalone/
+# The standalone server looks for its static and public assets beside itself.
+RUN cp -r .next/static .next/standalone/.next/static
+RUN cp -r public .next/standalone/public
 
-# Copy prisma CLI for runtime migrations
-RUN cp -r node_modules/prisma ./standalone/node_modules/prisma
-RUN cp -r node_modules/@prisma ./standalone/node_modules/@prisma
-RUN cp -r node_modules/bcryptjs ./standalone/node_modules/bcryptjs 2>/dev/null || true
-
-WORKDIR /app/standalone
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-CMD ["sh", "docker-entrypoint.sh"]
+# Migrations and the admin seed run as the Fly release command (fly.toml), from
+# /app where the full node_modules lives, not on every boot.
+CMD ["node", ".next/standalone/server.js"]

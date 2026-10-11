@@ -6,9 +6,9 @@ No dataset is read: every PredSet here is generated.
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
+pd = pytest.importorskip("pandas")
 pytest.importorskip("scipy")
 
 from app.ml.landmarks.quality import QualityMetrics, QualityParams, quality_score  # noqa: E402

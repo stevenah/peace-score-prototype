@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { fetchMlBackend } from "@/lib/ml-backend";
+import { isUploadKey } from "@/lib/s3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only keys handed out by /api/upload/init may be analysed and played back.
+    if (!isUploadKey(s3Key)) {
+      return NextResponse.json({ error: "Invalid s3Key" }, { status: 400 });
+    }
+
     // Notify ML backend to start analysis from S3
     let mlRes: Response;
     try {
@@ -29,7 +35,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({ s3_key: s3Key }),
       });
     } catch {
-      console.error("ML backend unreachable (all URLs failed)");
+      console.error("ML backend unreachable");
       return NextResponse.json(
         { error: "Failed to start analysis" },
         { status: 502 },

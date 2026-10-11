@@ -60,13 +60,20 @@ class Settings(BaseSettings):
     # batch worker starts (no-op with mock models).
     warmup_models: bool = True
 
+    # --- Auth (app/api/auth.py) ---
+    # Shared with the web app, which holds it as ML_API_KEY. Required on the
+    # analyze routes and, as a signed token, on the live socket. Empty turns
+    # both checks off: the default for local dev and tests.
+    api_key: str = ""
+
     model_config = {"env_prefix": "PEACE_"}
 
     def public_summary(self) -> dict:
         """Effective settings for the startup log, without credentials."""
-        hidden = {"aws_access_key_id", "aws_secret_access_key"}
+        hidden = {"aws_access_key_id", "aws_secret_access_key", "api_key"}
         out = {k: v for k, v in self.model_dump().items() if k not in hidden}
         out["aws_credentials_set"] = bool(self.aws_access_key_id and self.aws_secret_access_key)
+        out["api_key_set"] = bool(self.api_key)
         return out
 
 

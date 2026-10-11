@@ -1,0 +1,6 @@
+{
+  "description": "Auth token on the live WebSocket URL (?token=...): `<unix expiry>.<hex HMAC-SHA256 of the expiry digits, keyed with the shared API key>`. Signed by lib/ml-backend.ts (signLiveToken), checked by ml-backend/app/api/auth.py (valid_live_token); tests on both sides assert they agree with this file. The key below is a test value, not a secret.",
+  "key": "contract-test-key",
+  "expires": 1790000000,
+  "token": "1790000000.a12cae588dc3d4dc028d2626cc48cb0584ec4b43db0e77879f231b4c990e6097"
+}

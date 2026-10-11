@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { registerUpload } from "@/lib/upload-sessions";
-import { getPresignedPutUrl } from "@/lib/s3";
+import { getPresignedPutUrl, uploadKey } from "@/lib/s3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const ext = filename.includes(".")
       ? filename.slice(filename.lastIndexOf(".")).toLowerCase()
       : ".mp4";
-    const s3Key = `uploads/${uploadId}${ext}`;
+    const s3Key = uploadKey(uploadId, ext);
     const presignedUrl = await getPresignedPutUrl(s3Key, "video/mp4", 3600);
 
     return NextResponse.json({ uploadId, presignedUrl, s3Key });

@@ -18,7 +18,9 @@ primary_region = 'ams'
   PEACE_LANDMARKS_ENABLED = 'false'
   PEACE_LANDMARKS_DISPLAY = 'false'
   PEACE_TORCH_THREADS = '2'
-  # S3 secrets must be set via: fly secrets set PEACE_S3_BUCKET=... PEACE_AWS_ACCESS_KEY_ID=... PEACE_AWS_SECRET_ACCESS_KEY=...
+  # Secrets, set with `fly secrets set`: PEACE_API_KEY (same value as ML_API_KEY
+  # on peace-frontend), PEACE_S3_BUCKET, PEACE_AWS_ACCESS_KEY_ID,
+  # PEACE_AWS_SECRET_ACCESS_KEY
 
 [http_service]
   internal_port = 8000
@@ -26,6 +28,14 @@ primary_region = 'ams'
   auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
+
+  # The port only opens after model warm-up, hence the long grace period.
+  [[http_service.checks]]
+    grace_period = '60s'
+    interval = '30s'
+    timeout = '5s'
+    method = 'GET'
+    path = '/api/v1/health'
 
 [[vm]]
   memory = '4gb'

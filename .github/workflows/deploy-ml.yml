@@ -1,0 +1,38 @@
+name: Deploy ML backend
+
+# Ships peace-ml when serving code changes. Training code and docs are not in
+# the image, so they do not restart the machine.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ml-backend/**"
+      - "!ml-backend/training/**"
+      - "!ml-backend/**/*.md"
+      - "contracts/**"
+      - ".github/workflows/deploy-ml.yml"
+  workflow_dispatch:
+
+# One deploy of this app at a time; a newer push queues behind it.
+concurrency:
+  group: deploy-ml
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      only: ml
+
+  deploy:
+    name: Deploy peace-ml
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # --ha=false: exactly one machine, which owns the volume holding jobs.db.
+      - run: flyctl deploy --remote-only --yes --ha=false
+        working-directory: ml-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

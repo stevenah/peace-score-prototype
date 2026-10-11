@@ -4,6 +4,7 @@
        docker-up docker-down docker-build \
        db-up minio-up infra-up infra-down bootstrap \
        train-landmarks train-landmarks-results \
+       deploy prod-status \
        clean
 
 # -------------------------------------------------------------------
@@ -137,6 +138,18 @@ docker-down: ## Stop all services
 
 docker-build: ## Rebuild docker images
 	docker compose build
+
+# -------------------------------------------------------------------
+# Deployment (Fly.io through GitHub Actions; see README)
+# -------------------------------------------------------------------
+
+deploy: ## Redeploy both apps from main (a push to main already does this for what changed)
+	gh workflow run deploy-web.yml --ref main
+	gh workflow run deploy-ml.yml --ref main
+
+prod-status: ## Machine state of both Fly apps
+	fly status -a peace-frontend
+	fly status -a peace-ml
 
 # -------------------------------------------------------------------
 # Clean

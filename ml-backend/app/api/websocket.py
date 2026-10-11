@@ -13,6 +13,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from PIL import Image
 from starlette.concurrency import run_in_threadpool
 
+from app.api.auth import valid_live_token
 from app.config import settings
 from app.ml.landmarks.session import SessionStats
 from app.ml.pipeline import AnalysisPipeline, FrameResult, create_pipeline
@@ -23,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 # Close code for "server busy, try again later" (RFC 6455 section 7.4.1).
 WS_TRY_AGAIN_LATER = 1013
+# Close code for "policy violation": no valid token.
+WS_POLICY_VIOLATION = 1008
 
 _sockets_lock = threading.Lock()
 _live_sockets = 0
@@ -106,6 +109,12 @@ async def live_analysis(websocket: WebSocket):
     Client sends binary JPEG frames.
     Server responds with one JSON analysis result per frame.
     """
+    if not valid_live_token(websocket.query_params.get("token")):
+        # Closing before accept refuses the handshake itself, and comes before
+        # _admit so an unauthenticated caller cannot take a live slot.
+        await websocket.close(code=WS_POLICY_VIOLATION)
+        return
+
     if not _admit():
         # Accept, then close with a reason the client can show; a handshake
         # rejection would surface as an opaque connection error.
