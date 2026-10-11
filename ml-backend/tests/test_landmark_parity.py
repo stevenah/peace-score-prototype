@@ -28,6 +28,7 @@ BACKEND = Path(__file__).resolve().parents[1]
 
 
 def test_blank_interior_is_low_quality_through_the_serving_classifier(tiny_bundle):
+    pytest.importorskip("pandas")  # training.landmarks.sanity needs the train extra
     from training.landmarks.sanity import blank_check
 
     res = blank_check(tiny_bundle)
@@ -36,6 +37,7 @@ def test_blank_interior_is_low_quality_through_the_serving_classifier(tiny_bundl
 
 
 def test_unmasked_positive_control_canvas_shows_the_badge_the_mask_removes():
+    pytest.importorskip("pandas")  # training.landmarks.sanity needs the train extra
     from app.ml.landmarks.bench import synthetic_olympus_frame
     from app.ml.landmarks.preprocess import canonicalize
     from training.landmarks.sanity import badge_canvas_box, canonicalize_unmasked

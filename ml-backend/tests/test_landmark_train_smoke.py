@@ -10,9 +10,9 @@ from __future__ import annotations
 import json
 
 import numpy as np
-import pandas as pd
 import pytest
 
+pd = pytest.importorskip("pandas")
 torch = pytest.importorskip("torch")
 
 from app.ml.landmarks.layouts import OLYMPUS_1920, aperture_mask  # noqa: E402

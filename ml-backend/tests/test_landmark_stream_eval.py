@@ -10,7 +10,6 @@ from dataclasses import replace
 
 import cv2
 import numpy as np
-import pandas as pd
 import pytest
 
 from app.ml.landmarks.layouts import OLYMPUS_1920
@@ -18,10 +17,13 @@ from app.ml.landmarks.preprocess import canonicalize
 from app.ml.landmarks.quality import QualityParams
 from app.ml.landmarks.stations import NUM_STATIONS, STATION_INDEX, STATION_ORDER
 from app.ml.landmarks.tracker import FrameEvidence, StationTracker, TrackerParams
-from training.landmarks.calibrate import PredSet
-from training.landmarks.run_utils import softmax
-from training.landmarks.stream_eval import aggregate, fast_observed, replay, station_records, stream_record
-from training.landmarks.stream_sim import (
+
+pd = pytest.importorskip("pandas")
+
+from training.landmarks.calibrate import PredSet  # noqa: E402
+from training.landmarks.run_utils import softmax  # noqa: E402
+from training.landmarks.stream_eval import aggregate, fast_observed, replay, station_records, stream_record  # noqa: E402
+from training.landmarks.stream_sim import (  # noqa: E402
     PLACEHOLDER,
     TRANSIT_KINDS,
     StreamConfig,
