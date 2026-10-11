@@ -8,11 +8,12 @@ from io import BytesIO
 from typing import Optional
 
 import numpy as np
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+from app.api.auth import require_api_key
 from app.api.schemas import (
     AnalysisResponse,
     FrameAnalysisResponse,
@@ -26,6 +27,9 @@ from app.services.instances import worker
 from app.services.job_store import job_store
 
 router = APIRouter(prefix="/api/v1")
+
+# On every route except /health, which Fly's health check calls without a key.
+_authenticated = [Depends(require_api_key)]
 
 
 def _check_disk_space() -> None:
@@ -69,7 +73,7 @@ async def health_check():
     )
 
 
-@router.post("/analyze/frame", response_model=FrameAnalysisResponse)
+@router.post("/analyze/frame", response_model=FrameAnalysisResponse, dependencies=_authenticated)
 async def analyze_frame(
     frame: UploadFile = File(...),
     previous_frame: Optional[UploadFile] = File(None),
@@ -119,7 +123,7 @@ class AnalyzeS3Request(BaseModel):
     s3_key: str
 
 
-@router.post("/analyze/s3")
+@router.post("/analyze/s3", dependencies=_authenticated)
 async def analyze_from_s3(body: AnalyzeS3Request):
     """Create an analysis job for a video already uploaded to S3.
 
@@ -135,7 +139,7 @@ async def analyze_from_s3(body: AnalyzeS3Request):
     }
 
 
-@router.get("/analyze/{analysis_id}", response_model=AnalysisResponse)
+@router.get("/analyze/{analysis_id}", response_model=AnalysisResponse, dependencies=_authenticated)
 async def get_analysis(analysis_id: str):
     """Poll for analysis status and results."""
     job = job_store.get_job(analysis_id)

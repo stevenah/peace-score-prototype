@@ -20,8 +20,12 @@ def _pin_settings(monkeypatch):
     `use_mock_models` defaults to False, so without this the suite would load
     the real 70 MB checkpoint and its results would depend on the developer's
     environment. Tests that need real models opt in by overriding this.
+
+    Auth is off for the same reason: a PEACE_API_KEY in the developer's .env
+    would otherwise 401 every request. tests/test_auth.py turns it on.
     """
     monkeypatch.setattr(settings, "use_mock_models", True)
+    monkeypatch.setattr(settings, "api_key", "")
 
 
 @pytest.fixture(autouse=True)

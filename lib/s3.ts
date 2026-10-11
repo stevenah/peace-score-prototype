@@ -25,6 +25,20 @@ function getClient(): S3Client {
   return _client;
 }
 
+/** The object key a browser upload is written to. `ext` includes its dot. */
+export function uploadKey(uploadId: string, ext: string): string {
+  return `uploads/${uploadId}${ext}`;
+}
+
+/**
+ * Whether `key` has the shape `uploadKey` produces for an id from
+ * `registerUpload`. Clients send the key back when an upload finishes; this
+ * keeps them from pointing an analysis at some other object in the bucket.
+ */
+export function isUploadKey(key: unknown): key is string {
+  return typeof key === "string" && /^uploads\/up_\d+_[a-z0-9]*\.[^/]*$/.test(key);
+}
+
 export async function getPresignedUrl(key: string, expiresIn = 3600) {
   const bucket = process.env.S3_BUCKET_NAME;
   if (!bucket) {

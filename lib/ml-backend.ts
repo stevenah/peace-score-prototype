@@ -1,46 +1,37 @@
+import { createHmac } from "crypto";
+
 const ML_BACKEND_URL =
   process.env.ML_BACKEND_URL || "http://localhost:8000";
-const ML_BACKEND_FALLBACK_URL = process.env.ML_BACKEND_FALLBACK_URL || "";
+// Shared with the ML backend, which reads it as PEACE_API_KEY. Empty leaves
+// both sides open, which is the local-dev default.
+const ML_API_KEY = process.env.ML_API_KEY || "";
+
+// Long enough to outlast a cold start of the ML machine, which the socket's
+// handshake waits through.
+const LIVE_TOKEN_TTL_SECONDS = 300;
 
 /**
- * Fetch from the ML backend with automatic failover to the fallback URL.
- * Tries the primary URL first; if it fails (network error or 5xx), retries
- * against the fallback URL when one is configured.
+ * Fetch from the ML backend, authenticating with the shared key when one is set.
  */
 export async function fetchMlBackend(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const urls = [ML_BACKEND_URL];
-  if (ML_BACKEND_FALLBACK_URL) {
-    urls.push(ML_BACKEND_FALLBACK_URL);
-  }
+  const headers = new Headers(init?.headers);
+  if (ML_API_KEY) headers.set("x-api-key", ML_API_KEY);
+  return fetch(`${ML_BACKEND_URL}${path}`, { ...init, headers });
+}
 
-  let lastError: unknown;
-
-  for (const baseUrl of urls) {
-    try {
-      const res = await fetch(`${baseUrl}${path}`, init);
-      // Retry on server errors (5xx) if we have a fallback
-      if (res.status >= 500 && baseUrl !== urls[urls.length - 1]) {
-        lastError = new Error(`ML backend returned ${res.status}`);
-        console.warn(
-          `ML backend ${baseUrl} returned ${res.status}, trying fallback...`,
-        );
-        continue;
-      }
-      return res;
-    } catch (err) {
-      lastError = err;
-      if (baseUrl !== urls[urls.length - 1]) {
-        console.warn(
-          `ML backend ${baseUrl} unreachable, trying fallback...`,
-          err,
-        );
-        continue;
-      }
-    }
-  }
-
-  throw lastError;
+/**
+ * Token for the live WebSocket, which the browser opens straight to the ML
+ * backend and cannot attach headers to. Format: `<unix expiry>.<hmac of it>`.
+ * Null when no key is configured.
+ */
+export function signLiveToken(): string | null {
+  if (!ML_API_KEY) return null;
+  const expires = Math.floor(Date.now() / 1000) + LIVE_TOKEN_TTL_SECONDS;
+  const signature = createHmac("sha256", ML_API_KEY)
+    .update(String(expires))
+    .digest("hex");
+  return `${expires}.${signature}`;
 }
