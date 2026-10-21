@@ -11,7 +11,8 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+# `prisma generate` never opens the database; the real path is set at runtime.
+ENV DATABASE_URL=file:/tmp/placeholder.db
 RUN pnpm exec prisma generate
 
 # --- Dev stage: next dev with hot reload ---
@@ -34,6 +35,8 @@ RUN cp -r public .next/standalone/public
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-# Migrations and the admin seed run as the Fly release command (fly.toml), from
-# /app where the full node_modules lives, not on every boot.
-CMD ["node", ".next/standalone/server.js"]
+# The database is a SQLite file on the Fly volume (DATABASE_URL in fly.toml).
+# Migrations and the admin seed run here at boot, from /app where the full
+# node_modules lives: a Fly release command runs in a machine without the
+# volume and could not reach the file. Both are no-ops when nothing changed.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node_modules/.bin/tsx prisma/seed-deploy.ts && exec node .next/standalone/server.js"]

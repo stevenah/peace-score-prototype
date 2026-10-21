@@ -4,15 +4,16 @@ Next.js frontend + FastAPI ML backend for endoscopy video analysis.
 
 ## Local setup
 
-Ports: **frontend 3001**, **ML backend 8001**, Postgres 5432, MinIO 9000/9001.
+Ports: **frontend 3001**, **ML backend 8001**, MinIO 9000/9001.
 (3000 and 8000 are deliberately avoided — they collide with other projects.)
+
+The web app's database is a SQLite file (`dev.db` locally, a Fly volume in
+production), so there is no database server to run.
 
 ### Prerequisites
 
 - Node 22.13+ (pnpm 11 will not run on older versions) and [pnpm](https://pnpm.io) (`corepack enable`)
 - [uv](https://docs.astral.sh/uv/) for the Python backend
-- Postgres reachable at `localhost:5432` — either a native install, or `make db-up`
-  to run one in Docker on 5433 (adjust `DATABASE_URL` accordingly)
 
 ### One-time bootstrap
 
@@ -21,7 +22,8 @@ make bootstrap
 ```
 
 That copies `.env.example` to `.env` if needed, installs both dependency trees,
-generates the Prisma client, applies migrations, and seeds the database.
+generates the Prisma client, creates `dev.db` with the migrations, and seeds
+the admin account (`admin@peace.dev` / `admin123`, local only).
 
 ### Run it
 
@@ -51,8 +53,9 @@ object storage configured.
 make docker-up
 ```
 
-Brings up Postgres, MinIO, the ML backend and the frontend, already wired to
-each other. Frontend on 3001, ML backend on 8001.
+Brings up MinIO, the ML backend and the frontend, already wired to each
+other. Frontend on 3001, ML backend on 8001. The frontend's SQLite file lives
+in `.docker-data/web/`.
 
 ## Common tasks
 
@@ -94,8 +97,10 @@ shows what is served there and changes nothing.
 ## Deployment
 
 Two Fly.io apps in `ams`, both stopped while idle: `peace-frontend` (`fly.toml`)
-and `peace-ml` (`ml-backend/fly.toml`). Postgres is on Neon and videos are in
-S3. The local setup above does not depend on any of it.
+and `peace-ml` (`ml-backend/fly.toml`). Each keeps its state in a SQLite file
+on its own Fly volume (`peace_web_data`, `peace_ml_data`); videos are in S3.
+There is no database server anywhere. The local setup above does not depend
+on any of it.
 
 ### How a deploy happens
 
@@ -108,8 +113,13 @@ Push to `main`. Two workflows each decide whether they need to run:
 
 `make deploy` runs both by hand and `make prod-status` shows the machines.
 
-Database migrations and the admin seed run once per frontend deploy, as the
-`release_command` in `fly.toml`, before the new version takes traffic.
+Database migrations and the admin seed run when the frontend machine boots
+(the `CMD` in `Dockerfile.frontend`). A Fly release command would run in a
+temporary machine without the volume, so it cannot reach the file; at boot
+both steps take about a second and are no-ops when nothing changed.
+
+Fly snapshots the volume daily and keeps five days. Restoring a snapshot is
+`fly volumes snapshots list` then `fly volumes create --snapshot-id`.
 
 Do not run `fly deploy` from a laptop. It uploads the local directory as the
 build context, and a working copy can hold patient-derived files
@@ -121,8 +131,7 @@ Set with `fly secrets set NAME=value -a <app>`.
 
 | App | Secret | Purpose |
 |---|---|---|
-| `peace-frontend` | `DATABASE_URL` | Neon connection string (the direct one, not the pooled one) |
-| | `NEXTAUTH_SECRET` | Signs sessions: `openssl rand -base64 32` |
+| `peace-frontend` | `NEXTAUTH_SECRET` | Signs sessions: `openssl rand -base64 32` |
 | | `ML_API_KEY` | Shared key for the ML backend |
 | | `SEED_ADMIN_PASSWORD` | Password for the admin account the seed creates; `SEED_ADMIN_EMAIL` changes its address |
 | | `S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Video storage |
@@ -143,8 +152,9 @@ login**. Send them the link and that password.
 
 ### Cost
 
-While idle the bill is the `peace-ml` volume (10 GB, $1.50/month) plus storage
-for the two stopped machines, well under $1. While awake the frontend costs
+While idle the bill is the two volumes (10 GB for `peace-ml`, 1 GB for
+`peace-frontend`, $1.65/month together) plus storage for the two stopped
+machines, well under $1. While awake the frontend costs
 about $0.005/hour and the ML backend about $0.037/hour, and each stops itself
 after a few idle minutes. The first request after a stop waits for a cold
 start. Fly prices as of October 2026.

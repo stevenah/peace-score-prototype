@@ -55,6 +55,9 @@ ml-backend/app/models/*.onnx
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+*.db-journal
+*.db-wal
+*.db-shm
 /generated/
 
 # uploads

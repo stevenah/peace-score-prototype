@@ -5,22 +5,21 @@ primary_region = 'ams'
   dockerfile = 'Dockerfile.frontend'
   target = 'prod'
 
-[deploy]
-  # Once per deploy, in a temporary machine, before the new version takes
-  # traffic. Not on every wake from zero.
-  release_command = 'sh -c "node_modules/.bin/prisma migrate deploy && node prisma/seed-deploy.js"'
-
 [env]
   AUTH_TRUST_HOST = 'true'
   NEXT_TELEMETRY_DISABLED = '1'
+  # SQLite on the volume below. Migrations and the admin seed run at boot
+  # (Dockerfile.frontend CMD), because a release command would run in a
+  # machine without the volume.
+  DATABASE_URL = 'file:/data/peace.db'
   # Server-side calls and the browser's live WebSocket both use the public
   # hostname: it is the only address that wakes a stopped machine.
   ML_BACKEND_URL = 'https://peace-ml.fly.dev'
   ML_BACKEND_PUBLIC_URL = 'https://peace-ml.fly.dev'
   AWS_REGION = 'us-east-1'
-  # Secrets, set with `fly secrets set`: DATABASE_URL, NEXTAUTH_SECRET,
-  # ML_API_KEY (same value as PEACE_API_KEY on peace-ml), SEED_ADMIN_PASSWORD,
-  # S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+  # Secrets, set with `fly secrets set`: NEXTAUTH_SECRET, ML_API_KEY (same
+  # value as PEACE_API_KEY on peace-ml), SEED_ADMIN_PASSWORD, S3_BUCKET_NAME,
+  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 [http_service]
   internal_port = 3000
@@ -30,7 +29,8 @@ primary_region = 'ams'
   min_machines_running = 0
 
   [[http_service.checks]]
-    grace_period = '10s'
+    # Boot runs the migrations and seed first, hence the grace period.
+    grace_period = '20s'
     interval = '30s'
     timeout = '5s'
     method = 'GET'
@@ -40,3 +40,10 @@ primary_region = 'ams'
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
+
+# One machine owns the database file. The deploy workflow passes --ha=false so
+# Fly never adds a second one.
+[mounts]
+  source = 'peace_web_data'
+  destination = '/data'
+  initial_size = '1gb'

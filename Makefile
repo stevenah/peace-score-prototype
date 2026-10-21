@@ -2,7 +2,7 @@
        lint typecheck check install install-web install-ml \
        db-push db-generate db-studio \
        docker-up docker-down docker-build \
-       db-up minio-up infra-up infra-down bootstrap \
+       minio-up infra-up infra-down bootstrap \
        train-landmarks train-landmarks-results \
        deploy prod-status \
        clean
@@ -95,19 +95,16 @@ db-studio: ## Open Prisma Studio
 	pnpm exec prisma studio
 
 # -------------------------------------------------------------------
-# Local infrastructure (Postgres + MinIO only — app runs on the host)
+# Local infrastructure (MinIO only — the database is a SQLite file)
 # -------------------------------------------------------------------
 
-db-up: ## Start only Postgres (localhost:5432)
-	docker compose up -d postgres
-
-minio-up: ## Start only MinIO S3 (API localhost:9000, console localhost:9001)
+minio-up: ## Start MinIO S3 (API localhost:9000, console localhost:9001)
 	docker compose up -d minio minio-init
 
-infra-up: db-up minio-up ## Start Postgres + MinIO
+infra-up: minio-up ## Start local infrastructure
 
 infra-down: ## Stop local infrastructure
-	docker compose stop postgres minio
+	docker compose stop minio
 
 # -------------------------------------------------------------------
 # Bootstrap
@@ -127,7 +124,7 @@ bootstrap: ## Fresh clone -> runnable: deps, env, prisma client, migrations, see
 # Docker
 # -------------------------------------------------------------------
 
-docker-up: ## Start all services with docker compose
+docker-up: ## Start MinIO, the ML backend and the frontend with docker compose
 	docker compose up
 
 docker-up-d: ## Start all services in background
