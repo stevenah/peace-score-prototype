@@ -408,6 +408,23 @@ def _parse_meta(path: Path, meta: Mapping[str, Any]) -> dict:
     }
 
 
+def check_meta(bundle_dir: str | os.PathLike) -> dict:
+    """Read and validate ``meta.json`` alone: the parsed serving fields.
+
+    Raises LandmarkUnavailable naming the first mismatch. The weights are not
+    read, so this is cheap enough to list bundles with.
+    """
+    path = Path(bundle_dir)
+    return _parse_meta(path, read_meta(path))
+
+
+def selftest_error(model: "nn.Module", st: Mapping[str, Any]) -> float:
+    """max |logit - reference| of a bundle's selftest on ``model`` (CPU fp32)."""
+    expected = np.asarray([float(v) for v in st["logits"]])
+    got = _selftest_logits(model, int(st.get("seed", SELFTEST_SEED)), int(st["input_size"]))
+    return float(np.max(np.abs(got - expected)))
+
+
 def _run_selftest(path: Path, model: "nn.Module", st: Mapping[str, Any]) -> None:
     expected = np.asarray(_floats(path, st, "logits", NUM_STATIONS))
     rtol, atol = float(st.get("rtol", SELFTEST_RTOL)), float(st.get("atol", SELFTEST_ATOL))

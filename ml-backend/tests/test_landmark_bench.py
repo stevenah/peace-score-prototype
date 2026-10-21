@@ -41,3 +41,22 @@ def test_sustained_mode_runs_concurrent_streams():
     report = main(["--mode", "sustained", "--archs", "tiny_test_cnn", "--sizes", "64", "--frames", "2",
                    "--warmup", "0", "--rate", "0", "--streams", "2", "--peace", "mock", "--width", "1280"])
     assert all(r["streams"] == 2 and r["frames"] == 4 for r in report["results"])
+
+
+def test_an_exported_bundle_replaces_the_arch_sweep(tiny_bundle, capsys):
+    report = main(["--bundle", str(tiny_bundle), "--frames", "3", "--warmup", "1", "--peace", "mock",
+                   "--width", "1280", "--progress"])
+    assert [r["config"] for r in report["results"]] == ["peace_only", "lm-0.0.1"]
+    assert report["skipped_archs"] == [] and report["results"][1]["landmark_ms"]["p50"] > 0
+    progress = [line for line in capsys.readouterr().out.splitlines() if line.startswith("@@progress ")]
+    assert [line.split(" ", 1)[1] for line in progress] == [
+        '{"done": 0, "total": 2, "label": "configurations"}',
+        '{"done": 1, "total": 2, "label": "configurations"}',
+        '{"done": 2, "total": 2, "label": "configurations"}',
+    ]
+
+
+def test_progress_lines_are_opt_in(capsys):
+    main(["--archs", "tiny_test_cnn", "--sizes", "64", "--frames", "2", "--warmup", "0", "--peace", "mock",
+          "--width", "1280"])
+    assert "@@progress" not in capsys.readouterr().out

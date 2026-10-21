@@ -27,6 +27,9 @@ const ACTION_COLORS: Record<string, string> = {
   PASSWORD_RESET: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
   USER_DELETED: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
   ANALYSIS_DELETED: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+  MODEL_ACTIVATED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
+  SERVING_MODE_CHANGED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
+  EVAL_STARTED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -38,6 +41,9 @@ const ACTION_LABELS: Record<string, string> = {
   PASSWORD_RESET: "Password Reset",
   VIDEO_UPLOADED: "Video Uploaded",
   ANALYSIS_DELETED: "Analysis Deleted",
+  MODEL_ACTIVATED: "Model Activated",
+  SERVING_MODE_CHANGED: "Serving Mode",
+  EVAL_STARTED: "Eval Started",
 };
 
 const ACTION_VERBS: Record<string, string> = {
@@ -49,6 +55,9 @@ const ACTION_VERBS: Record<string, string> = {
   PASSWORD_RESET: "reset password for",
   VIDEO_UPLOADED: "uploaded video",
   ANALYSIS_DELETED: "deleted analysis",
+  MODEL_ACTIVATED: "switched the landmark model to",
+  SERVING_MODE_CHANGED: "set station recognition to",
+  EVAL_STARTED: "started eval",
 };
 
 const ALL_ACTIONS = [
@@ -60,6 +69,9 @@ const ALL_ACTIONS = [
   "UPLOAD_COUNT_RESET",
   "VIDEO_UPLOADED",
   "ANALYSIS_DELETED",
+  "MODEL_ACTIVATED",
+  "SERVING_MODE_CHANGED",
+  "EVAL_STARTED",
 ];
 
 function formatDetails(details: Record<string, unknown>): string {

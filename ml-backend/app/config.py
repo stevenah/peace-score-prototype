@@ -53,6 +53,23 @@ class Settings(BaseSettings):
     # Classify every Nth live frame (skipped frames do not enter the tracker).
     landmark_every_n: int = 1
 
+    # --- Model admin (app/api/models.py) ---
+    # Lets the web app's admin page switch the served landmark bundle and
+    # start evals. On by default so a local checkout needs no config;
+    # fly.toml turns it off in production, where the env and BUNDLE.lock rule.
+    model_admin: bool = True
+    # The admin page's choice of bundle and serving mode; outlives restarts.
+    landmark_state_file: str = str(_APP_DIR / "models" / "landmarks" / "ACTIVE.json")
+    # Training runs (training/landmarks). Their exported bundles are offered
+    # for serving and their fold runs for the script evals.
+    runs_dir: str = str(_APP_DIR.parent / "runs")
+    # More folders to search for bundles, os.pathsep-separated. Always
+    # searched: app/models/landmarks, runs_dir, the bundle cache and
+    # landmark_bundle_dir.
+    landmark_bundle_roots: str = ""
+    # Eval job records, logs and results. Under runs/, which is gitignored.
+    eval_dir: str = str(_APP_DIR.parent / "runs" / "ui_evals")
+
     # --- Serving resources ---
     torch_threads: int = 2
     max_live_sockets: int = 4

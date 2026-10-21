@@ -63,6 +63,34 @@ make db-studio   # Prisma Studio
 make help        # all targets
 ```
 
+## Landmark models and evals
+
+`/admin` → **Models** lists every landmark bundle the ML backend can find
+(`ml-backend/runs/**/bundle/`, `ml-backend/app/models/landmarks/` and the S3
+bundle cache), says which one is served, and lets an admin:
+
+- switch station recognition between **Off**, **Shadow** (computed and logged,
+  nothing shown) and **On screen**;
+- make another bundle active. It is verified and warmed up first, and a bundle
+  that fails keeps the current one serving. Live sessions already open keep the
+  model they started with;
+- run evals, one at a time, each as its own process:
+
+| Eval | Runs | Needs |
+|---|---|---|
+| Self-test | file hashes, reference logits, synthetic frames through the live path | nothing |
+| Latency | per-frame latency on the CPU, with and without the bundle (`bench.py`) | nothing |
+| Held-out accuracy | clip and frame metrics on the dev fold a fold model never saw, or the shift set (`bundle_eval.py`) | the private frame cache and the `train` extra |
+| Out-of-fold metrics, gates report, procedure replay | `evaluate.py` and `stream_eval.py` on a training run | the run's saved predictions and `calibration.json` |
+
+The locked test set cannot be scored from the page; that stays
+`evaluate.py --test`, once.
+
+The choice is saved in `ml-backend/app/models/landmarks/ACTIVE.json` and eval
+results in `ml-backend/runs/ui_evals/`, both gitignored. Production has this
+switched off (`PEACE_MODEL_ADMIN=false` in `ml-backend/fly.toml`): the tab
+shows what is served there and changes nothing.
+
 ## Deployment
 
 Two Fly.io apps in `ams`, both stopped while idle: `peace-frontend` (`fly.toml`)

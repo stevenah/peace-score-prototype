@@ -28,6 +28,7 @@ from app.ml.landmarks.bundle import LandmarkBundle, LandmarkUnavailable, fetch_b
 from app.ml.landmarks.layouts import LAYOUTS_BY_NAME, Layout, detect_mode
 from app.ml.landmarks.preprocess import canonicalize, normalize, to_model_input
 from app.ml.landmarks.quality import QUALITY_SIZE, quality_metrics, quality_score
+from app.ml.landmarks.registry import selected_bundle_dir
 from app.ml.landmarks.session import LayoutLock
 from app.ml.landmarks.tracker import FrameEvidence, StationTracker, TrackerParams
 
@@ -91,6 +92,10 @@ def _softmax(z: np.ndarray) -> np.ndarray:
 
 
 def _bundle_path_from_settings() -> Path:
+    chosen = selected_bundle_dir()
+    if chosen is not None:
+        logger.info("Landmark bundle %s chosen on the admin page", chosen)
+        return chosen
     if settings.landmark_bundle_dir:
         logger.warning("Landmark bundle from PEACE_LANDMARK_BUNDLE_DIR=%s (BUNDLE.lock bypassed)",
                        settings.landmark_bundle_dir)
@@ -115,8 +120,8 @@ class LandmarkModelManager:
     full live path, so a loaded manager (and /health ``landmarks_loaded``)
     means frames can actually be served. A failed load or warm-up is cached:
     every later ``get_instance`` raises the same LandmarkUnavailable at once
-    instead of re-hashing and re-loading per connection. ``reset()`` is the
-    only way to retry (tests, explicit reload).
+    instead of re-hashing and re-loading per connection. ``reset()`` retries
+    the configured bundle; ``activate()`` swaps in another one.
     """
 
     _instance: ClassVar[LandmarkModelManager | None] = None
@@ -151,20 +156,43 @@ class LandmarkModelManager:
             if cls._failure is not None:
                 raise LandmarkUnavailable(cls._failure)
             try:
-                from app.ml.real_models import ModelManager
-
-                path = Path(bundle_dir) if bundle_dir else _bundle_path_from_settings()
-                dev = ModelManager._resolve_device(device or settings.device)
-                inst = cls(load_bundle(path, device=str(dev)))
-                inst.warmup()
-                cls._instance = inst
-            except Exception as exc:
-                cls._failure = str(exc) if isinstance(exc, LandmarkUnavailable) else (
-                    f"landmark model failed to load: {type(exc).__name__}: {exc}"
-                )
+                cls._instance = cls._load(bundle_dir, device)
+            except LandmarkUnavailable as exc:
+                cls._failure = str(exc)
                 logger.error("Landmark model unavailable: %s", cls._failure)
-                raise LandmarkUnavailable(cls._failure) from exc
+                raise
             return cls._instance
+
+    @classmethod
+    def _load(cls, bundle_dir: str | Path | None, device: str | None) -> LandmarkModelManager:
+        """A warmed-up manager for ``bundle_dir`` (default: the configured bundle)."""
+        try:
+            from app.ml.real_models import ModelManager
+
+            path = Path(bundle_dir) if bundle_dir else _bundle_path_from_settings()
+            dev = ModelManager._resolve_device(device or settings.device)
+            inst = cls(load_bundle(path, device=str(dev)))
+            inst.warmup()
+            return inst
+        except LandmarkUnavailable:
+            raise
+        except Exception as exc:
+            raise LandmarkUnavailable(f"landmark model failed to load: {type(exc).__name__}: {exc}") from exc
+
+    @classmethod
+    def activate(cls, bundle_dir: str | Path, device: str | None = None) -> LandmarkModelManager:
+        """Load ``bundle_dir`` and serve it in place of the current model.
+
+        The swap happens only after the new bundle has verified and served its
+        warm-up frames: a failure raises LandmarkUnavailable and leaves the
+        current model (or the current cached failure) as it was. Live sessions
+        already open keep the manager they started with, so one procedure
+        never mixes two models' thresholds; new sessions get the new one.
+        """
+        with cls._lock:
+            inst = cls._load(bundle_dir, device)
+            cls._instance, cls._failure = inst, None
+            return inst
 
     @classmethod
     def peek(cls) -> LandmarkModelManager | None:

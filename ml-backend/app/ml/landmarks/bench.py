@@ -14,6 +14,9 @@ and landmark weights are random (latency does not depend on them).
     python -m app.ml.landmarks.bench --mode sustained --archs effb0 --sizes 224 \\
         --minutes 30 --rate 2 --streams 2
 
+    # an exported bundle (its own weights and input size) instead of --archs
+    python -m app.ml.landmarks.bench --bundle runs/<exp>/all_dev/bundle/lm-1.0.0 --frames 60
+
 Prints a table, then one JSON document (also written to --out if given).
 The PEACE-only baseline is always measured first. ``drift`` is the median
 latency of the last third of frames over the first third (throttling shows
@@ -39,6 +42,7 @@ import numpy as np
 from PIL import Image
 
 from app.ml.landmarks.layouts import OLYMPUS_1920
+from app.ml.landmarks.progress import report as report_progress
 
 # -- synthetic processor frames ------------------------------------------------
 
@@ -142,6 +146,14 @@ def _landmark_manager(arch: str, size: int, workdir: Path, channels_last: bool):
     out = write_bundle(workdir / f"{arch}-{size}" / version, build(arch),
                        {"version": version, "input_size": size})
     return LandmarkModelManager(load_bundle(out, device="cpu"), channels_last=channels_last)
+
+
+def _bundle_manager(bundle_dir: str, channels_last: bool):
+    """An exported bundle, verified and loaded on CPU like any served one."""
+    from app.ml.landmarks.bundle import load_bundle
+    from app.ml.landmarks.classifier import LandmarkModelManager
+
+    return LandmarkModelManager(load_bundle(bundle_dir, device="cpu"), channels_last=channels_last)
 
 
 def _attach(pipe, manager) -> None:
@@ -254,26 +266,42 @@ def main(argv: list[str] | None = None) -> dict:
     p.add_argument("--peace", choices=("real", "mock"), default="real")
     p.add_argument("--width", type=int, default=1920)
     p.add_argument("--channels-last", action="store_true", help="NHWC landmark forwards (convnets)")
+    p.add_argument("--bundle", action="append", default=[],
+                   help="benchmark this exported bundle directory instead of --archs (repeatable)")
+    p.add_argument("--progress", action="store_true", help="print progress lines for the eval runner")
     p.add_argument("--out", default="")
     args = p.parse_args(argv)
 
     torch.set_num_threads(args.threads)
-    archs = [a for a in args.archs.split(",") if a]
+    archs = [] if args.bundle else [a for a in args.archs.split(",") if a]
     have = available_archs()
     skipped = [a for a in archs if a not in have]
     archs = [a for a in archs if a in have]
     sizes = [int(s) for s in args.sizes.split(",") if s]
     jpegs = [encode_jpeg(synthetic_olympus_frame(args.width, seed=k)) for k in range(8)]
+    total = 1 + len(args.bundle) + len(archs) * len(sizes)
 
-    rows = [run_config("peace_only", None, args, jpegs)]
-    _print_progress(rows[-1])
+    rows: list[dict] = []
+
+    def done(row: dict) -> None:
+        rows.append(row)
+        _print_progress(row)
+        if args.progress:
+            report_progress(len(rows), total, "configurations")
+
+    if args.progress:
+        report_progress(0, total, "configurations")
+    done(run_config("peace_only", None, args, jpegs))
+    for bundle_dir in args.bundle:
+        manager = _bundle_manager(bundle_dir, args.channels_last)
+        done(run_config(manager.version + ("/nhwc" if manager._channels_last else ""), manager, args, jpegs))
+        del manager
     with tempfile.TemporaryDirectory(prefix="lm-bench-") as tmp:
         for arch in archs:
             for size in sizes:
                 manager = _landmark_manager(arch, size, Path(tmp), args.channels_last)
                 label = f"{arch}@{size}" + ("/nhwc" if manager._channels_last else "")
-                rows.append(run_config(label, manager, args, jpegs))
-                _print_progress(rows[-1])
+                done(run_config(label, manager, args, jpegs))
                 del manager
 
     report = {

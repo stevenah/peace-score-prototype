@@ -8,7 +8,10 @@ export type AuditAction =
   | "ROLE_CHANGED"
   | "PASSWORD_RESET"
   | "VIDEO_UPLOADED"
-  | "ANALYSIS_DELETED";
+  | "ANALYSIS_DELETED"
+  | "MODEL_ACTIVATED"
+  | "SERVING_MODE_CHANGED"
+  | "EVAL_STARTED";
 
 interface AuditLogEntry {
   actorId: string | null;

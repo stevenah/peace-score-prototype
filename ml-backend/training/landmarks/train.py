@@ -215,8 +215,12 @@ def state_fp32(model) -> dict:
 # -- prediction ------------------------------------------------------------------------------------
 
 def predict_table(net, table: pd.DataFrame, spec: D.ImageSpec, device: str, batch: int = 128,
-                  workers: int = 4, with_emb: bool = True) -> tuple[np.ndarray, np.ndarray | None]:
-    """fp32 logits (and embeddings) for every row of an eval frame table. No autocast, no TF32."""
+                  workers: int = 4, with_emb: bool = True,
+                  on_batch=None) -> tuple[np.ndarray, np.ndarray | None]:
+    """fp32 logits (and embeddings) for every row of an eval frame table. No autocast, no TF32.
+
+    ``on_batch(frames_done)`` is called after every batch (progress reporting).
+    """
     import torch
     from torch.utils.data import DataLoader
 
@@ -224,12 +228,16 @@ def predict_table(net, table: pd.DataFrame, spec: D.ImageSpec, device: str, batc
     loader = DataLoader(D.EvalFrames(table, spec), batch_size=batch, num_workers=workers)
     logits = np.zeros((len(table), NUM_STATIONS), np.float32)
     emb = np.zeros((len(table), net.embedding_dim), np.float16) if with_emb else None
+    done = 0
     with torch.inference_mode(), fp32_inference():
         for x, idx in loader:
             lo, e = net(x.to(device).float())
             logits[idx.numpy()] = lo.float().cpu().numpy()
             if with_emb:
                 emb[idx.numpy()] = e.float().cpu().numpy().astype(np.float16)
+            done += len(idx)
+            if on_batch is not None:
+                on_batch(done)
     return logits, emb
 
 

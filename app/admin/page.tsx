@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2, ClipboardList } from "lucide-react";
+import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2, ClipboardList, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/Progress";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import AuditLogPanel from "./AuditLogPanel";
+import ModelsPanel from "./models/ModelsPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -262,6 +263,7 @@ export default function AdminPage() {
       <Tabs
         tabs={[
           { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
+          { id: "models", label: "Models", icon: <Boxes className="h-4 w-4" /> },
           { id: "audit", label: "Audit Log", icon: <ClipboardList className="h-4 w-4" /> },
         ]}
         activeTab={activeTab}
@@ -270,6 +272,8 @@ export default function AdminPage() {
 
       {activeTab === "audit" ? (
         <AuditLogPanel />
+      ) : activeTab === "models" ? (
+        <ModelsPanel />
       ) : (
       <>
       {/* Search */}

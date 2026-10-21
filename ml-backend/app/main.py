@@ -5,11 +5,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.models import router as models_router
 from app.api.routes import router as api_router
 from app.api.websocket import router as ws_router
 from app.config import settings
+from app.ml.landmarks import registry
 from app.ml.pipeline import warm_up_models
-from app.services.instances import worker
+from app.services.instances import eval_runner, worker
 from app.services.job_store import job_store
 
 logger = logging.getLogger(__name__)
@@ -71,6 +73,11 @@ def _configure_torch() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # The admin page's saved serving mode outranks the env; applied before the
+    # summary and the warm-up so both describe what will actually be served.
+    saved_mode = registry.apply_saved_mode()
+    if saved_mode:
+        logger.info("Landmark serving mode %r restored from %s", saved_mode, settings.landmark_state_file)
     logger.info("Effective settings: %s", settings.public_summary())
     _configure_torch()
     # Startup: recover any jobs stuck from a previous crash, start worker
@@ -82,8 +89,11 @@ async def lifespan(app: FastAPI):
     if settings.warmup_models:
         logger.info("Model warm-up: %s", warm_up_models())
     worker.start()
+    if settings.model_admin:
+        eval_runner.start()
     yield
     # Shutdown: graceful stop
+    eval_runner.stop()
     worker.stop()
 
 
@@ -98,4 +108,5 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware)
 
 app.include_router(api_router)
+app.include_router(models_router)
 app.include_router(ws_router)

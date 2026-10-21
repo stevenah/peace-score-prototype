@@ -133,6 +133,7 @@ def build_meta(run_dir: Path, exp_dir: Path | None, version: str, cfg: dict, var
     metrics = _metrics_summary(exp_dir)
     if smoke or not ship:
         metrics["WARNING"] = "smoke/uncalibrated export: not for serving"
+    run_metrics = _opt(run_dir / "metrics.json") or {}
     return {
         "version": version,
         "arch": None,  # filled by the caller from the model
@@ -146,6 +147,8 @@ def build_meta(run_dir: Path, exp_dir: Path | None, version: str, cfg: dict, var
         "metrics": metrics,
         "train": {
             "candidate": cfg["candidate"], "variant": variant, "run": run_dir.name,
+            # train.py's mode and the outer fold it held out: bundle_eval scores a bundle on that fold only
+            "mode": run_metrics.get("mode"), "fold": run_metrics.get("fold"),
             "weights_sha256": sha256_file(weights), "git_sha": prov.get("git_sha"),
             "git_dirty": prov.get("git_dirty"), "manifest_sha256": prov.get("manifest_sha256"),
             "clip_set_sha256": prov.get("clip_set_sha256"), "frames_csv_sha256": prov.get("frames_csv_sha256"),

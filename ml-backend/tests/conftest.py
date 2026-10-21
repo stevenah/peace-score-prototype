@@ -45,6 +45,13 @@ def _pin_landmark_settings(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "landmark_bundle_lock", str(tmp_path / "no-BUNDLE.lock"))
     monkeypatch.setattr(settings, "landmark_bundle_dir", "")
     monkeypatch.setattr(settings, "landmark_cache_dir", str(tmp_path / "landmark-cache"))
+    # Model admin: no saved selection, training runs or eval jobs from the
+    # developer's checkout (BUNDLE.lock's folder, also searched, is tmp_path).
+    monkeypatch.setattr(settings, "model_admin", True)
+    monkeypatch.setattr(settings, "landmark_state_file", str(tmp_path / "ACTIVE.json"))
+    monkeypatch.setattr(settings, "runs_dir", str(tmp_path / "runs"))
+    monkeypatch.setattr(settings, "landmark_bundle_roots", "")
+    monkeypatch.setattr(settings, "eval_dir", str(tmp_path / "evals"))
     LandmarkModelManager.reset()
     yield
     LandmarkModelManager.reset()

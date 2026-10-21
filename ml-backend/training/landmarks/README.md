@@ -299,6 +299,9 @@ $PY -m training.landmarks.evaluate --exp runs/stageB_regy32_in1k_s0 --report   #
 $PY -m training.landmarks.export_bundle --exp runs/stageB_regy32_in1k_s0 --version lm-1.0.0
 # I1: online == offline against a local server started with PEACE_LANDMARK_BUNDLE_DIR=<bundle>
 $PY -m training.landmarks.replay_ws --patient HT### --bundle runs/<exp>/all_dev/bundle/lm-1.0.0
+# any exported bundle on clips it never trained on (a fold model's own outer fold, or --split shift);
+# also the "Held-out accuracy" eval on the admin page. Never the locked test set.
+$PY -m training.landmarks.bundle_eval --bundle runs/<exp>/fold0/bundle/lm-0.1.0
 # laptop smoke of the whole path (MPS/CPU): train -> export -> load_bundle
 $PY -m training.landmarks.train --config smoke --smoke --device mps
 $PY -m training.landmarks.export_bundle --run runs/smoke_<stamp>/smoke --version lm-0.0.1-smoke --smoke
@@ -319,6 +322,7 @@ $PY -m training.landmarks.export_bundle --run runs/smoke_<stamp>/smoke --version
 | `sanity.py` | G-PIPELINE permutation run, NBI / mode-switch / cap shortcut tests, unmasked positive control, blank-frame check |
 | `lso.py` | leave-station-out MSP vs energy vs kNN (implemented, not yet run) |
 | `export_bundle.py` | `lm-<semver>/` via `app.ml.landmarks.bundle.write_bundle`, CPU selftest, tarball + sha256, `aws s3 cp` and `BUNDLE.lock` text |
+| `bundle_eval.py` | an exported bundle scored with evaluate.py's metrics and its own T, tau and q_min, on its held-out dev fold or the shift set; aggregates only |
 | `replay_ws.py` | online (`/api/v1/ws/live`) vs offline station sequence on one patient |
 | `run_utils.py` | run dirs, provenance, metrics, bootstrap |
 | `gates.json`, `configs/*.json` | pre-registered gates; Stage B, ablation, sanity and smoke configs (`"base"` inherits) |

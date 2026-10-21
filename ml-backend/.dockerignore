@@ -10,3 +10,6 @@ uv.lock
 # Force-include model weights (overrides .gitignore)
 !app/models/
 !app/models/*.pt
+
+# The admin page's local model choice (host paths)
+app/models/landmarks/ACTIVE.json

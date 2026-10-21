@@ -17,6 +17,8 @@ primary_region = 'ams'
   # ENABLED='true' with DISPLAY='false' for the shadow study.
   PEACE_LANDMARKS_ENABLED = 'false'
   PEACE_LANDMARKS_DISPLAY = 'false'
+  # The admin page's Models tab is read-only here: no switching, no evals.
+  PEACE_MODEL_ADMIN = 'false'
   PEACE_TORCH_THREADS = '2'
   # Secrets, set with `fly secrets set`: PEACE_API_KEY (same value as ML_API_KEY
   # on peace-frontend), PEACE_S3_BUCKET, PEACE_AWS_ACCESS_KEY_ID,
