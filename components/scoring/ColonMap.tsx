@@ -122,20 +122,19 @@ export function ColonMap({
             cx={SEGMENT_PATHS[currentSegment].labelX}
             cy={SEGMENT_PATHS[currentSegment].labelY - 30}
             r="8"
-            fill="#ef4444"
-            className="animate-pulse"
+            className="animate-pulse fill-destructive"
           />
         )}
 
         {/* Legend */}
         <g transform="translate(20, 430)">
-          <rect x="0" y="0" width="12" height="12" fill="#22c55e" rx="2" />
+          <rect x="0" y="0" width="12" height="12" className="fill-success" rx="2" />
           <text x="18" y="10" className="text-xs fill-muted-foreground">Visited (Good)</text>
 
-          <rect x="120" y="0" width="12" height="12" fill="#3b82f6" rx="2" />
+          <rect x="120" y="0" width="12" height="12" className="fill-primary" rx="2" />
           <text x="138" y="10" className="text-xs fill-muted-foreground">Current</text>
 
-          <rect x="210" y="0" width="12" height="12" fill="#e5e7eb" rx="2" />
+          <rect x="210" y="0" width="12" height="12" className="fill-muted" rx="2" />
           <text x="228" y="10" className="text-xs fill-muted-foreground">Not Visited</text>
         </g>
       </svg>
@@ -146,7 +145,7 @@ export function ColonMap({
           Segments: {segmentsVisited.length}/8
         </span>
         <span className={`font-medium ${
-          segmentsVisited.includes('cecum') ? 'text-green-600' : 'text-muted-foreground'
+          segmentsVisited.includes('cecum') ? 'text-success' : 'text-muted-foreground'
         }`}>
           {segmentsVisited.includes('cecum') ? '✓ Cecum Reached' : 'Cecum Not Reached'}
         </span>

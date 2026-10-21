@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, MinusCircle, XCircle } from "lucide-react";
+import { Alert } from "@/components/ui/Alert";
 import {
   LIVE_FRAME_INTERVAL_MS,
   fmtElapsed,
@@ -38,9 +39,9 @@ function Status({ state, children }: { state: "good" | "bad" | "neutral"; childr
   const Icon = state === "good" ? CheckCircle2 : state === "bad" ? XCircle : MinusCircle;
   const tone =
     state === "good"
-      ? "text-emerald-700 dark:text-emerald-400"
+      ? "text-success"
       : state === "bad"
-        ? "text-red-700 dark:text-red-400"
+        ? "text-destructive"
         : "text-muted-foreground";
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${tone}`}>
@@ -50,19 +51,12 @@ function Status({ state, children }: { state: "good" | "bad" | "neutral"; childr
   );
 }
 
-/** A share of 0..1 as a thin bar on a lighter step of the same blue. */
+/** A share of 0..1 as a thin bar on a lighter step of the same accent. */
 function ShareBar({ value }: { value: number | null | undefined }) {
   const pct = value == null || !Number.isFinite(value) ? 0 : Math.min(1, Math.max(0, value)) * 100;
   return (
-    <span
-      aria-hidden="true"
-      className="block h-1.5 w-full min-w-16"
-      style={{ backgroundColor: "color-mix(in oklab, var(--clinical-blue) 14%, var(--card))" }}
-    >
-      <span
-        className="block h-full rounded-r-[3px]"
-        style={{ width: `${pct}%`, backgroundColor: "var(--clinical-blue)" }}
-      />
+    <span aria-hidden="true" className="block h-1.5 w-full min-w-16 bg-primary/15">
+      <span className="block h-full rounded-r-[3px] bg-primary" style={{ width: `${pct}%` }} />
     </span>
   );
 }
@@ -112,16 +106,10 @@ function LatencyView({ result }: { result: LatencyResult }) {
           <p className="mt-0.5 text-2xl font-semibold tracking-tight">{fmtPercent(budget)}</p>
           {budget != null && (
             <>
-              <div
-                className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full"
-                style={{ backgroundColor: "color-mix(in oklab, var(--clinical-blue) 14%, var(--card))" }}
-              >
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                 <div
-                  className={`h-full rounded-full ${fits ? "" : "bg-red-600 dark:bg-red-500"}`}
-                  style={{
-                    width: `${Math.min(100, budget * 100)}%`,
-                    backgroundColor: fits ? "var(--clinical-blue)" : undefined,
-                  }}
+                  className={`h-full rounded-full ${fits ? "bg-primary" : "bg-destructive"}`}
+                  style={{ width: `${Math.min(100, budget * 100)}%` }}
                 />
               </div>
               <div className="mt-1.5">
@@ -188,13 +176,9 @@ function AccuracyView({ result }: { result: AccuracyResult }) {
   return (
     <div className="space-y-5">
       {result.warnings?.map((warning) => (
-        <p
-          key={warning}
-          className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <Alert key={warning} variant="warning" icon={AlertTriangle}>
           {warning}
-        </p>
+        </Alert>
       ))}
 
       <p className="text-sm text-muted-foreground">

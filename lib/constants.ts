@@ -14,30 +14,19 @@ export const PEACE_SCORE_DESCRIPTIONS: Record<PeaceScore, string> = {
   3: "Clean mucosa or minor transparent fluid, no impediment",
 };
 
+/** The PEACE scale as hex, for SVG attributes and inline styles. Keep in step
+ *  with --peace-0..3 in app/globals.css, which is the same scale as tokens. */
 export const PEACE_SCORE_COLORS: Record<PeaceScore, string> = {
-  0: "#ef4444", // red-500
-  1: "#f97316", // orange-500
-  2: "#84cc16", // lime-500
-  3: "#22c55e", // green-500
-};
-
-export const PEACE_SCORE_BG_COLORS: Record<PeaceScore, string> = {
-  0: "#fef2f2", // red-50
-  1: "#fff7ed", // orange-50
-  2: "#f7fee7", // lime-50
-  3: "#f0fdf4", // green-50
+  0: "#ef4444",
+  1: "#f97316",
+  2: "#84cc16",
+  3: "#22c55e",
 };
 
 export const MOTION_LABELS: Record<MotionDirection, string> = {
   insertion: "Inserting",
   withdrawal: "Withdrawal",
   stationary: "Stationary",
-};
-
-export const MOTION_COLORS: Record<MotionDirection, string> = {
-  insertion: "#3b82f6", // blue-500
-  withdrawal: "#f97316", // orange-500
-  stationary: "#6b7280", // gray-500
 };
 
 export const REGION_LABELS: Record<AnatomicalRegion, string> = {

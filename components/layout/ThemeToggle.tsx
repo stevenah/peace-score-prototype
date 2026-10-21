@@ -3,6 +3,7 @@
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
+import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,42 +17,30 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <button
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground"
-        aria-label="Toggle theme"
-      >
-        <Sun className="h-4 w-4" />
-      </button>
+      <Button variant="ghost" size="icon" className="text-muted-foreground" aria-label="Toggle theme">
+        <Sun />
+      </Button>
     );
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? (
-            <Moon className="h-4 w-4" />
-          ) : theme === "system" ? (
-            <Monitor className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
-        </button>
+        <Button variant="ghost" size="icon" className="text-muted-foreground" aria-label="Toggle theme">
+          {theme === "dark" ? <Moon /> : theme === "system" ? <Monitor /> : <Sun />}
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="mr-2 h-4 w-4" />
+          <Sun />
           Light
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="mr-2 h-4 w-4" />
+          <Moon />
           Dark
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Monitor className="mr-2 h-4 w-4" />
+          <Monitor />
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

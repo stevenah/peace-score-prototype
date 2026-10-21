@@ -16,13 +16,17 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
 import { usePolling } from "@/hooks/usePolling";
 import { useBatchUpload } from "@/hooks/useBatchUpload";
 import { UploadCard } from "./UploadCard";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
   DropdownMenu,
@@ -37,7 +41,7 @@ import { AnalysisCard } from "./AnalysisCard";
 import { deleteAnalysesBulk, deleteFailedAnalyses } from "./actions";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
+import { PEACE_SCORE_LABELS } from "@/lib/constants";
 import type { AnalysisRecord, PeaceScore } from "@/lib/types";
 import {
   AlertDialog,
@@ -78,28 +82,36 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 const EMPTY_STATES: Record<
   StatusFilter,
-  { icon: React.ReactNode; title: string; description: string }
+  { icon: LucideIcon; title: string; description: string }
 > = {
   all: {
-    icon: <Upload className="h-12 w-12 text-muted-foreground/40" />,
+    icon: Upload,
     title: "No analyses yet",
     description: "Upload an endoscopy video to get started with PEACE scoring.",
   },
   processing: {
-    icon: <Clock className="h-12 w-12 text-muted-foreground/40" />,
+    icon: Clock,
     title: "No active analyses",
     description: "All your analyses have completed processing.",
   },
   completed: {
-    icon: <CheckCircle2 className="h-12 w-12 text-muted-foreground/40" />,
+    icon: CheckCircle2,
     title: "No completed analyses",
     description: "Your analyses are still being processed.",
   },
   failed: {
-    icon: <AlertTriangle className="h-12 w-12 text-muted-foreground/40" />,
+    icon: AlertTriangle,
     title: "No failed analyses",
     description: "All your analyses completed successfully.",
   },
+};
+
+/** Score filter pills take the PEACE token for their level when selected. */
+const SCORE_PILL: Record<PeaceScore, string> = {
+  0: "bg-peace-0 text-white",
+  1: "bg-peace-1 text-white",
+  2: "bg-peace-2 text-white",
+  3: "bg-peace-3 text-white",
 };
 
 export default function DashboardPage() {
@@ -298,41 +310,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Welcome back, {session?.user?.name || session?.user?.email}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {counts.failed > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setDeleteFailedOpen(true)}
-              className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/50"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Failed ({counts.failed})
+      <PageHeader
+        title={<>Welcome back, {session?.user?.name || session?.user?.email}</>}
+        actions={
+          <>
+            {counts.failed > 0 && (
+              <Button variant="outline-destructive" onClick={() => setDeleteFailedOpen(true)}>
+                <Trash2 />
+                Delete Failed ({counts.failed})
+              </Button>
+            )}
+            {counts.all > 0 && (
+              <Button
+                variant={selectMode ? "secondary" : "outline"}
+                onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+              >
+                <CheckSquare />
+                {selectMode ? "Cancel" : "Select"}
+              </Button>
+            )}
+            <Button asChild>
+              <Link href="/analyze">
+                <Upload />
+                New Analysis
+              </Link>
             </Button>
-          )}
-          {counts.all > 0 && (
-            <Button
-              variant={selectMode ? "secondary" : "outline"}
-              onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              {selectMode ? "Cancel" : "Select"}
-            </Button>
-          )}
-          <Link href="/analyze">
-            <Button>
-              <Upload className="mr-2 h-4 w-4" />
-              New Analysis
-            </Button>
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Filter tabs */}
       <Tabs
@@ -348,13 +353,14 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
+          <Search aria-hidden="true" className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Search files"
             placeholder="Search files..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 rounded-md border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-56 pl-9"
           />
         </div>
 
@@ -366,17 +372,13 @@ export default function DashboardPage() {
               key={score}
               type="button"
               onClick={() => toggleScore(score)}
+              aria-pressed={scoreFilter.includes(score)}
               className={cn(
-                "flex h-7 min-w-8 items-center justify-center rounded-full px-2 text-xs font-medium transition-colors",
+                "flex h-7 min-w-8 items-center justify-center rounded-full px-2 text-xs font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 scoreFilter.includes(score)
-                  ? "text-white shadow-sm"
+                  ? `${SCORE_PILL[score]} shadow-sm`
                   : "bg-muted text-muted-foreground hover:text-foreground",
               )}
-              style={
-                scoreFilter.includes(score)
-                  ? { backgroundColor: PEACE_SCORE_COLORS[score] }
-                  : undefined
-              }
               title={PEACE_SCORE_LABELS[score]}
             >
               {score}
@@ -387,18 +389,16 @@ export default function DashboardPage() {
         {/* Date range dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="outline"
               className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm transition-colors hover:bg-muted",
-                dateRange !== "all"
-                  ? "border-primary/50 text-foreground"
-                  : "text-muted-foreground",
+                "font-normal",
+                dateRange !== "all" ? "border-primary/50" : "text-muted-foreground",
               )}
             >
-              <Calendar className="h-3.5 w-3.5" />
+              <Calendar />
               {DATE_RANGE_LABELS[dateRange]}
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Date Range</DropdownMenuLabel>
@@ -422,18 +422,16 @@ export default function DashboardPage() {
         {/* Sort dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="outline"
               className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm transition-colors hover:bg-muted",
-                sortBy !== "date-desc"
-                  ? "border-primary/50 text-foreground"
-                  : "text-muted-foreground",
+                "font-normal",
+                sortBy !== "date-desc" ? "border-primary/50" : "text-muted-foreground",
               )}
             >
-              <ArrowUpDown className="h-3.5 w-3.5" />
+              <ArrowUpDown />
               {SORT_LABELS[sortBy]}
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Sort By</DropdownMenuLabel>
@@ -456,33 +454,28 @@ export default function DashboardPage() {
 
         {/* Clear filters */}
         {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+            <X />
             Clear
-          </button>
+          </Button>
         )}
 
         {/* Page size */}
-        <div className="ml-auto">
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-            className="h-9 rounded-md border border-border bg-card px-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size} / page
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          aria-label="Results per page"
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}
+          className="ml-auto w-32"
+        >
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size} / page
+            </option>
+          ))}
+        </Select>
       </div>
 
       {/* Bulk action bar */}
@@ -505,7 +498,7 @@ export default function DashboardPage() {
             disabled={selectedIds.size === 0}
             onClick={() => setBulkDeleteOpen(true)}
           >
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            <Trash2 />
             Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
           </Button>
         </div>
@@ -557,44 +550,35 @@ export default function DashboardPage() {
 
       {/* Cards grid or empty state */}
       {analyses.length === 0 && (filter === "all" || filter === "processing" ? activeUploads.length === 0 : true) ? (
-        <Card className="py-12 text-center">
-          <div className="flex flex-col items-center gap-3">
-            {counts.all > 0 && hasActiveFilters ? (
-              <>
-                <Search className="h-12 w-12 text-muted-foreground/40" />
-                <h3 className="text-lg font-medium text-foreground/70">
-                  No matching analyses
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Try adjusting your filters to find what you&apos;re looking
-                  for.
-                </p>
-                <Button variant="outline" className="mt-2" onClick={clearFilters}>
-                  <X className="mr-2 h-4 w-4" />
-                  Clear Filters
-                </Button>
-              </>
-            ) : (
-              <>
-                {EMPTY_STATES[filter].icon}
-                <h3 className="text-lg font-medium text-foreground/70">
-                  {EMPTY_STATES[filter].title}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {EMPTY_STATES[filter].description}
-                </p>
-                {filter === "all" && (
+        counts.all > 0 && hasActiveFilters ? (
+          <EmptyState
+            icon={Search}
+            title="No matching analyses"
+            description="Try adjusting your filters to find what you're looking for."
+            action={
+              <Button variant="outline" onClick={clearFilters}>
+                <X />
+                Clear Filters
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={EMPTY_STATES[filter].icon}
+            title={EMPTY_STATES[filter].title}
+            description={EMPTY_STATES[filter].description}
+            action={
+              filter === "all" && (
+                <Button asChild>
                   <Link href="/analyze">
-                    <Button className="mt-2">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Start Analysis
-                    </Button>
+                    <Upload />
+                    Start Analysis
                   </Link>
-                )}
-              </>
-            )}
-          </div>
-        </Card>
+                </Button>
+              )
+            }
+          />
+        )
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -627,7 +611,7 @@ export default function DashboardPage() {
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
+                <ChevronLeft />
                 Previous
               </Button>
               <span className="text-sm text-muted-foreground">
@@ -640,7 +624,7 @@ export default function DashboardPage() {
                 onClick={() => setPage((p) => p + 1)}
               >
                 Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight />
               </Button>
             </div>
           )}

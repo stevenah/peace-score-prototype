@@ -27,7 +27,7 @@ export function AnalysisProgress({
     <Card>
       <div className="flex items-center gap-3">
         {isActive && (
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 aria-hidden="true" className="size-5 animate-spin text-primary" />
         )}
         <div className="flex-1">
           <p className="text-sm font-medium text-foreground">
@@ -42,7 +42,7 @@ export function AnalysisProgress({
             </div>
           )}
           {error && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            <p className="mt-1 text-sm text-destructive">
               {error}
             </p>
           )}

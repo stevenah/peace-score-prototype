@@ -1,44 +1,52 @@
 import { cn } from "@/lib/utils";
 
-export function Card({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
+      data-slot="card"
       className={cn(
-        "rounded-xl border border-border bg-card p-6 shadow-sm ring-1 ring-black/3 dark:ring-white/3",
+        "rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm",
         className,
       )}
-    >
-      {children}
-    </div>
+      {...props}
+    />
   );
 }
 
-export function CardHeader({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <div className={cn("mb-4", className)}>{children}</div>;
+export function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="card-header" className={cn("mb-4", className)} {...props} />;
 }
 
-export function CardTitle({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
   return (
-    <h3 className={cn("text-lg font-semibold text-foreground", className)}>
-      {children}
-    </h3>
+    <h3
+      data-slot="card-title"
+      className={cn("text-lg font-semibold text-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+export function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
+  return (
+    <p
+      data-slot="card-description"
+      className={cn("mt-1 text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+/** The small uppercase caption above a figure inside a card. */
+export function CardEyebrow({ className, ...props }: React.ComponentProps<"p">) {
+  return (
+    <p
+      data-slot="card-eyebrow"
+      className={cn(
+        "text-xs font-medium uppercase tracking-wider text-muted-foreground",
+        className,
+      )}
+      {...props}
+    />
   );
 }

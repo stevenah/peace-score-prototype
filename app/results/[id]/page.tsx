@@ -2,14 +2,17 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
-import Link from "next/link";
 import { AnalysisProgress } from "@/components/analysis/AnalysisProgress";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
 import { MotionVisual } from "@/components/analysis/MotionVisual";
 import { RegionHighlight } from "@/components/scoring/RegionHighlight";
 import { PeaceScoreGrid } from "@/components/scoring/PeaceScoreGrid";
 import { ScoreTimelineBar } from "@/components/scoring/ScoreTimelineBar";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { BackLink } from "@/components/layout/BackLink";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card, CardEyebrow, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   VideoPlaybackPlayer,
   type VideoPlaybackPlayerHandle,
@@ -18,6 +21,10 @@ import { useAnalysis } from "@/hooks/useAnalysis";
 import { formatDuration } from "@/lib/utils";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
 import type { PeaceScore, MotionDirection, AnatomicalRegion, TimelineEntry } from "@/lib/types";
+
+/** The side-panel cards beside the video share one frame. */
+const panelCard =
+  "flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center";
 
 export default function ResultsPage({
   params,
@@ -97,11 +104,9 @@ export default function ResultsPage({
 
   if (error) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-red-600">{error}</p>
-        <Link href="/analyze" className="mt-4 text-sm text-primary">
-          Back to analysis
-        </Link>
+      <div className="mx-auto max-w-md space-y-4 py-12">
+        <Alert variant="destructive">{error}</Alert>
+        <BackLink href="/analyze">Back to analysis</BackLink>
       </div>
     );
   }
@@ -112,16 +117,20 @@ export default function ResultsPage({
 
   const isComplete = analysis.status === "completed";
 
+  // Which entry drives the side panel: the one under the playhead, or the overall result.
+  const shownScore = activeEntry
+    ? (activeEntry.peace_score as PeaceScore)
+    : results
+      ? (Math.round(results.peace_scores.overall.score) as PeaceScore)
+      : null;
+  const shownScoreColor = shownScore != null ? PEACE_SCORE_COLORS[shownScore] : undefined;
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Analysis Results
-          </h1>
-          <p className="text-xs text-muted-foreground">ID: {id}</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Analysis Results"
+        description={<span className="font-mono text-xs">ID: {id}</span>}
+      />
 
       {!isComplete && (
         <AnalysisProgress
@@ -131,7 +140,7 @@ export default function ResultsPage({
         />
       )}
 
-      {isComplete && results && (
+      {isComplete && results && shownScore != null && (
         <div className="space-y-6">
           {/* Video + Live Scores layout (matches LiveAnalysis) */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-stretch">
@@ -209,107 +218,50 @@ export default function ResultsPage({
             </div>
 
             <div className="flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
-              {activeEntry ? (
-                <>
-                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
-                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      PEACE Score
-                    </p>
-                    <div className="flex items-baseline gap-1.5">
-                      <span
-                        className="text-4xl font-bold"
-                        style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
-                      >
-                        {activeEntry.peace_score}
-                      </span>
-                      <span className="text-sm text-muted-foreground/60">/ 3</span>
-                    </div>
-                    <div className="shrink-0 space-y-0.5 text-center">
-                      <p
-                        className="text-sm font-medium"
-                        style={{ color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore] }}
-                      >
-                        {PEACE_SCORE_LABELS[activeEntry.peace_score as PeaceScore]}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {Math.round(activeEntry.confidence * 100)}% confidence
-                      </p>
-                    </div>
-                  </Card>
-
-                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
-                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Motion
-                    </p>
-                    {activeEntry.motion ? (
-                      <MotionVisual
-                        direction={activeEntry.motion as MotionDirection}
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-muted-foreground/30">—</p>
+              <Card className={panelCard}>
+                <CardEyebrow className="shrink-0">PEACE Score</CardEyebrow>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-bold" style={{ color: shownScoreColor }}>
+                    {activeEntry ? activeEntry.peace_score : results.peace_scores.overall.score}
+                  </span>
+                  <span className="text-sm text-muted-foreground/60">/ 3</span>
+                </div>
+                <div className="shrink-0 space-y-0.5 text-center">
+                  <p className="text-sm font-medium" style={{ color: shownScoreColor }}>
+                    {activeEntry
+                      ? PEACE_SCORE_LABELS[shownScore]
+                      : results.peace_scores.overall.label || PEACE_SCORE_LABELS[shownScore]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {Math.round(
+                      (activeEntry ? activeEntry.confidence : results.peace_scores.overall.confidence) * 100,
                     )}
-                    <span />
-                  </Card>
+                    % confidence
+                  </p>
+                </div>
+              </Card>
 
-                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
-                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Region
-                    </p>
-                    {activeEntry.region ? (
-                      <RegionHighlight activeRegion={activeEntry.region as AnatomicalRegion} />
-                    ) : (
-                      <p className="text-sm font-medium text-muted-foreground/30">—</p>
-                    )}
-                    <p className="shrink-0 text-sm font-medium capitalize text-foreground">
-                      {activeEntry.region || "\u00A0"}
-                    </p>
-                  </Card>
+              <Card className={panelCard}>
+                <CardEyebrow className="shrink-0">Motion</CardEyebrow>
+                {activeEntry?.motion ? (
+                  <MotionVisual direction={activeEntry.motion as MotionDirection} />
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                )}
+                <span />
+              </Card>
 
-                </>
-              ) : (
-                <>
-                  <Card className="flex min-h-0 flex-1 flex-col items-center justify-between overflow-hidden pb-4 pt-3 text-center">
-                    <p className="shrink-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      PEACE Score
-                    </p>
-                    <div className="flex items-baseline gap-1.5">
-                      <span
-                        className="text-4xl font-bold"
-                        style={{ color: PEACE_SCORE_COLORS[Math.round(results.peace_scores.overall.score) as PeaceScore] }}
-                      >
-                        {results.peace_scores.overall.score}
-                      </span>
-                      <span className="text-sm text-muted-foreground/60">/ 3</span>
-                    </div>
-                    <div className="shrink-0 space-y-0.5 text-center">
-                      <p
-                        className="text-sm font-medium"
-                        style={{ color: PEACE_SCORE_COLORS[Math.round(results.peace_scores.overall.score) as PeaceScore] }}
-                      >
-                        {results.peace_scores.overall.label || PEACE_SCORE_LABELS[Math.round(results.peace_scores.overall.score) as PeaceScore]}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {Math.round(results.peace_scores.overall.confidence * 100)}% confidence
-                      </p>
-                    </div>
-                  </Card>
-
-                  <Card className="flex flex-1 flex-col items-center text-center">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Motion
-                    </p>
-                    <p className="text-sm font-medium text-muted-foreground/30">—</p>
-                  </Card>
-
-                  <Card className="flex flex-1 flex-col items-center text-center">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Region
-                    </p>
-                    <p className="text-sm font-medium text-muted-foreground/30">—</p>
-                  </Card>
-
-                </>
-              )}
+              <Card className={panelCard}>
+                <CardEyebrow className="shrink-0">Region</CardEyebrow>
+                {activeEntry?.region ? (
+                  <RegionHighlight activeRegion={activeEntry.region as AnatomicalRegion} />
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground/30">—</p>
+                )}
+                <p className="shrink-0 text-sm font-medium capitalize text-foreground">
+                  {activeEntry?.region || " "}
+                </p>
+              </Card>
             </div>
           </div>
 
@@ -329,40 +281,28 @@ export default function ResultsPage({
                 }}
               />
               <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlaying((p) => !p)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground/70 transition-colors hover:bg-accent"
-                  >
-                    {isPlaying ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRestart}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground/70 transition-colors hover:bg-accent"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </button>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDuration(replayTime)} /{" "}
-                    {formatDuration(totalDuration)}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => setIsPlaying((p) => !p)}
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                >
+                  {isPlaying ? <Pause /> : <Play />}
+                </Button>
+                <Button variant="outline" size="icon-sm" onClick={handleRestart} aria-label="Restart">
+                  <RotateCcw />
+                </Button>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {formatDuration(replayTime)} /{" "}
+                  {formatDuration(totalDuration)}
+                </span>
+                {activeEntry && (
+                  <span className="ml-auto text-sm font-bold" style={{ color: shownScoreColor }}>
+                    Score: {activeEntry.peace_score}/3 &middot;{" "}
+                    {activeEntry.motion} &middot; {activeEntry.region}
                   </span>
-                  {activeEntry && (
-                    <span
-                      className="ml-auto text-sm font-bold"
-                      style={{
-                        color: PEACE_SCORE_COLORS[activeEntry.peace_score as PeaceScore],
-                      }}
-                    >
-                      Score: {activeEntry.peace_score}/3 &middot;{" "}
-                      {activeEntry.motion} &middot; {activeEntry.region}
-                    </span>
-                  )}
-                </div>
+                )}
+              </div>
             </div>
           )}
 

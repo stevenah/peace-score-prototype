@@ -31,7 +31,7 @@ export function UploadAnalysis() {
       {/* Summary header */}
       <Card className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
-          <FileVideo className="h-5 w-5 text-primary" />
+          <FileVideo aria-hidden="true" className="size-5 text-primary" />
           <div>
             <p className="text-sm font-medium text-foreground">
               {completedCount} of {totalCount} complete
@@ -48,7 +48,7 @@ export function UploadAnalysis() {
         <div className="flex gap-2">
           {allComplete && (
             <Button variant="secondary" size="sm" onClick={reset}>
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              <RotateCcw />
               New Batch
             </Button>
           )}

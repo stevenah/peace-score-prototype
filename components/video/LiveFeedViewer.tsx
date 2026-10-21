@@ -106,7 +106,7 @@ export function LiveFeedViewer({
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-12">
         <CameraOff className="mb-4 h-10 w-10 text-muted-foreground/60" />
-        <p className="mb-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mb-2 text-sm text-destructive">{error}</p>
         <Button variant="secondary" size="sm" onClick={() => startStream()}>
           Retry
         </Button>

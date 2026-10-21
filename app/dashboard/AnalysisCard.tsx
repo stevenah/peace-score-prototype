@@ -2,17 +2,10 @@
 
 import Link from "next/link";
 import { memo, useState, useTransition } from "react";
-import {
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Trash2,
-  ExternalLink,
-} from "lucide-react";
+import { XCircle, Trash2, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/analysis/StatusBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,43 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteAnalysis } from "./actions";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
-import { formatDuration } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import type { PeaceScore, AnalysisRecord } from "@/lib/types";
-
-const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case "queued":
-      return (
-        <Badge bgColor="#fef3c7" color="#92400e">
-          <Clock className="h-3 w-3" />
-          Queued
-        </Badge>
-      );
-    case "processing":
-      return (
-        <Badge bgColor="#dbeafe" color="#1e40af">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Processing
-        </Badge>
-      );
-    case "completed":
-      return (
-        <Badge bgColor="#dcfce7" color="#166534">
-          <CheckCircle2 className="h-3 w-3" />
-          Complete
-        </Badge>
-      );
-    case "failed":
-      return (
-        <Badge bgColor="#fee2e2" color="#991b1b">
-          <XCircle className="h-3 w-3" />
-          Failed
-        </Badge>
-      );
-    default:
-      return null;
-  }
-});
 
 export const AnalysisCard = memo(function AnalysisCard({
   analysis,
@@ -108,7 +66,11 @@ export const AnalysisCard = memo(function AnalysisCard({
       onKeyDown={selectMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect?.(); } } : undefined}
     >
     <Card
-      className={`flex h-full flex-col justify-between transition-all ${selectMode ? "cursor-pointer hover:ring-2 hover:ring-primary/40" : ""} ${selected ? "ring-2 ring-primary bg-primary/10 border-primary/50 shadow-md shadow-primary/10" : ""}`}
+      className={cn(
+        "flex h-full flex-col justify-between transition-all",
+        selectMode && "cursor-pointer hover:ring-2 hover:ring-primary/40",
+        selected && "border-primary/50 bg-primary/10 shadow-md shadow-primary/10 ring-2 ring-primary",
+      )}
     >
       <div>
         {/* Header: filename + status */}
@@ -127,23 +89,11 @@ export const AnalysisCard = memo(function AnalysisCard({
           {analysis.status === "processing" && (
             <div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full w-1/3 animate-pulse rounded-full bg-blue-500"
-                  style={{
-                    animation:
-                      "indeterminate 1.5s ease-in-out infinite alternate",
-                  }}
-                />
+                <div className="h-full animate-indeterminate rounded-full bg-primary" />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Analyzing frames...
               </p>
-              <style jsx>{`
-                @keyframes indeterminate {
-                  0% { margin-left: 0; width: 33%; }
-                  100% { margin-left: 67%; width: 33%; }
-                }
-              `}</style>
             </div>
           )}
 
@@ -189,7 +139,7 @@ export const AnalysisCard = memo(function AnalysisCard({
           )}
 
           {analysis.status === "failed" && (
-            <p className="text-xs text-red-500">
+            <p className="text-xs text-destructive">
               Analysis could not be completed
             </p>
           )}
@@ -199,31 +149,30 @@ export const AnalysisCard = memo(function AnalysisCard({
       {/* Footer: actions */}
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         {isComplete ? (
-          <Link href={`/results/${analysis.analysisId}`}>
-            <Button variant="ghost" size="sm">
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/results/${analysis.analysisId}`}>
+              <ExternalLink />
               View Results
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         ) : analysis.status === "processing" || analysis.status === "queued" ? (
-          <Link href={`/results/${analysis.analysisId}`}>
-            <Button variant="ghost" size="sm">
-              View Progress
-            </Button>
-          </Link>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/results/${analysis.analysisId}`}>View Progress</Link>
+          </Button>
         ) : (
           <div />
         )}
 
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>
-            <button
-              type="button"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+            <Button
+              variant="ghost-destructive"
+              size="icon-xs"
               title={isActive ? "Cancel" : "Delete"}
+              aria-label={isActive ? "Cancel analysis" : "Delete analysis"}
             >
-              {isActive ? <XCircle className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
-            </button>
+              {isActive ? <XCircle /> : <Trash2 />}
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

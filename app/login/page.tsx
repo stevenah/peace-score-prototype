@@ -4,7 +4,11 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Activity } from "lucide-react";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
 
 type Step = "login" | "set-password" | "change-password";
 
@@ -17,9 +21,6 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const inputClass =
-    "mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -153,18 +154,31 @@ export default function LoginPage() {
     }
   }
 
+  const title =
+    step === "login"
+      ? "Sign in to PEACE Analyzer"
+      : step === "set-password"
+        ? "Set Your Password"
+        : "Change Your Password";
+
+  const submitLabel = isLoading
+    ? step === "login"
+      ? "Signing in..."
+      : step === "change-password"
+        ? "Changing password..."
+        : "Setting password..."
+    : step === "login"
+      ? "Sign in"
+      : step === "change-password"
+        ? "Change Password"
+        : "Set Password & Sign in";
+
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-8 shadow-lg shadow-black/3 ring-1 ring-black/2 dark:ring-white/2">
+      <Card className="w-full max-w-sm space-y-6 p-8">
         <div className="text-center">
-          <Activity className="mx-auto h-10 w-10 text-primary" />
-          <h1 className="mt-4 text-2xl font-bold text-foreground">
-            {step === "login"
-              ? "Sign in to PEACE Analyzer"
-              : step === "set-password"
-                ? "Set Your Password"
-                : "Change Your Password"}
-          </h1>
+          <Activity aria-hidden="true" className="mx-auto size-10 text-primary" />
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
           {step === "set-password" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Your account requires a password. Please create one to continue.
@@ -178,128 +192,85 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
-              {error}
-            </p>
-          )}
+          {error && <Alert variant="destructive">{error}</Alert>}
 
           {step !== "change-password" && (
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-foreground/80"
-              >
-                Email
-              </label>
-              <input
+            <Field label="Email" htmlFor="email">
+              <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={step === "set-password"}
-                className={`${inputClass} ${step === "set-password" ? "opacity-60" : ""}`}
                 placeholder="you@example.com"
               />
-            </div>
+            </Field>
           )}
 
           {step !== "change-password" && (
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground/80"
-              >
-                {step === "login" ? "Password" : "New Password"}
-              </label>
-              <input
+            <Field label={step === "login" ? "Password" : "New Password"} htmlFor="password">
+              <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required={step === "set-password"}
                 minLength={step === "set-password" ? 6 : undefined}
-                className={inputClass}
-                placeholder={
-                  step === "login" ? "••••••••" : "Min 6 characters"
-                }
+                placeholder={step === "login" ? "••••••••" : "Min 6 characters"}
               />
-            </div>
+            </Field>
           )}
 
           {step === "change-password" && (
-            <div>
-              <label
-                htmlFor="new-password"
-                className="block text-sm font-medium text-foreground/80"
-              >
-                New Password
-              </label>
-              <input
+            <Field label="New Password" htmlFor="new-password">
+              <Input
                 id="new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
-                className={inputClass}
                 placeholder="Min 6 characters"
               />
-            </div>
+            </Field>
           )}
 
           {(step === "set-password" || step === "change-password") && (
-            <div>
-              <label
-                htmlFor="confirm-password"
-                className="block text-sm font-medium text-foreground/80"
-              >
-                Confirm Password
-              </label>
-              <input
+            <Field label="Confirm Password" htmlFor="confirm-password">
+              <Input
                 id="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
-                className={inputClass}
                 placeholder="Re-enter your password"
               />
-            </div>
+            </Field>
           )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading
-              ? step === "login"
-                ? "Signing in..."
-                : step === "change-password"
-                  ? "Changing password..."
-                  : "Setting password..."
-              : step === "login"
-                ? "Sign in"
-                : step === "change-password"
-                  ? "Change Password"
-                  : "Set Password & Sign in"}
+            {submitLabel}
           </Button>
 
           {step === "set-password" && (
-            <button
+            <Button
               type="button"
+              variant="link"
+              className="w-full text-muted-foreground hover:text-foreground"
               onClick={() => {
                 setStep("login");
                 setPassword("");
                 setConfirmPassword("");
                 setError(null);
               }}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Back to sign in
-            </button>
+            </Button>
           )}
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

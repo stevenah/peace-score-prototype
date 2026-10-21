@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { List } from "@/components/ui/List";
+import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 interface AuditLogEntry {
@@ -18,18 +20,18 @@ interface AuditLogEntry {
   details: string | null;
 }
 
-const ACTION_COLORS: Record<string, string> = {
-  USER_CREATED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
-  VIDEO_UPLOADED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
-  USER_UPDATED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-  ROLE_CHANGED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-  UPLOAD_COUNT_RESET: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
-  PASSWORD_RESET: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
-  USER_DELETED: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
-  ANALYSIS_DELETED: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
-  MODEL_ACTIVATED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-  SERVING_MODE_CHANGED: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-  EVAL_STARTED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+const ACTION_VARIANTS: Record<string, BadgeVariant> = {
+  USER_CREATED: "success",
+  VIDEO_UPLOADED: "success",
+  EVAL_STARTED: "success",
+  USER_UPDATED: "primary",
+  ROLE_CHANGED: "primary",
+  MODEL_ACTIVATED: "primary",
+  SERVING_MODE_CHANGED: "primary",
+  UPLOAD_COUNT_RESET: "warning",
+  PASSWORD_RESET: "warning",
+  USER_DELETED: "destructive",
+  ANALYSIS_DELETED: "destructive",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -91,9 +93,6 @@ function formatDetails(details: Record<string, unknown>): string {
     .join(", ");
 }
 
-const inputClass =
-  "block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground";
-
 export default function AuditLogPanel() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [total, setTotal] = useState(0);
@@ -141,71 +140,61 @@ export default function AuditLogPanel() {
   return (
     <div className="space-y-4">
       {/* Filter */}
-      <div className="max-w-xs">
-        <select
-          value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
-          className={inputClass}
-        >
-          <option value="">All actions</option>
-          {ALL_ACTIONS.map((action) => (
-            <option key={action} value={action}>
-              {ACTION_LABELS[action] || action}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        aria-label="Filter by action"
+        value={actionFilter}
+        onChange={(e) => setActionFilter(e.target.value)}
+        className="max-w-xs"
+      >
+        <option value="">All actions</option>
+        {ALL_ACTIONS.map((action) => (
+          <option key={action} value={action}>
+            {ACTION_LABELS[action] || action}
+          </option>
+        ))}
+      </Select>
 
       {/* Log entries */}
       {logs.length === 0 ? (
-        <Card className="p-12 text-center">
-          <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            {actionFilter ? "No logs match this filter" : "No audit logs yet"}
-          </p>
-        </Card>
+        <EmptyState
+          icon={ClipboardList}
+          description={actionFilter ? "No logs match this filter" : "No audit logs yet"}
+        />
       ) : (
-        <div className="space-y-2">
+        <List>
           {logs.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-start gap-4 rounded-lg border border-border bg-card p-4"
-            >
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    className={`text-xs ${ACTION_COLORS[log.action] || "bg-muted text-muted-foreground"}`}
-                  >
-                    {ACTION_LABELS[log.action] || log.action}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(log.timestamp).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-sm">
-                  <span className="font-medium">
-                    {log.actorEmail ?? "System"}
-                  </span>{" "}
-                  {ACTION_VERBS[log.action] || "performed action on"}{" "}
-                  <span className="font-medium">
-                    {log.targetLabel ?? log.targetId ?? ""}
-                  </span>
-                </p>
-                {log.details && (
-                  <p className="text-xs text-muted-foreground">
-                    {(() => {
-                      try {
-                        return formatDetails(JSON.parse(log.details));
-                      } catch {
-                        return log.details;
-                      }
-                    })()}
-                  </p>
-                )}
+            <li key={log.id} className="space-y-1 px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={ACTION_VARIANTS[log.action] ?? "default"}>
+                  {ACTION_LABELS[log.action] || log.action}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(log.timestamp).toLocaleString()}
+                </span>
               </div>
-            </div>
+              <p className="text-sm">
+                <span className="font-medium">
+                  {log.actorEmail ?? "System"}
+                </span>{" "}
+                {ACTION_VERBS[log.action] || "performed action on"}{" "}
+                <span className="font-medium">
+                  {log.targetLabel ?? log.targetId ?? ""}
+                </span>
+              </p>
+              {log.details && (
+                <p className="text-xs text-muted-foreground">
+                  {(() => {
+                    try {
+                      return formatDetails(JSON.parse(log.details));
+                    } catch {
+                      return log.details;
+                    }
+                  })()}
+                </p>
+              )}
+            </li>
           ))}
-        </div>
+        </List>
       )}
 
       {/* Pagination */}
@@ -217,7 +206,7 @@ export default function AuditLogPanel() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
-            <ChevronLeft className="mr-1 h-4 w-4" />
+            <ChevronLeft />
             Previous
           </Button>
           <span className="text-sm text-muted-foreground">
@@ -230,7 +219,7 @@ export default function AuditLogPanel() {
             disabled={page >= totalPages}
           >
             Next
-            <ChevronRight className="ml-1 h-4 w-4" />
+            <ChevronRight />
           </Button>
         </div>
       )}

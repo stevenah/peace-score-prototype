@@ -13,7 +13,9 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { List } from "@/components/ui/List";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Progress";
@@ -290,10 +292,9 @@ function ServingCard({
         <h2 className="text-sm font-semibold">Model in use</h2>
         {model && <p className="mt-1 text-sm text-muted-foreground">{model}</p>}
         {failure && (
-          <p className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400">
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>No landmark model is loaded: {failure}</span>
-          </p>
+          <Alert variant="destructive" icon={XCircle} className="mt-2">
+            No landmark model is loaded: {failure}
+          </Alert>
         )}
         {(source || serving.selected_version) && !serving.mock && (
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -311,8 +312,6 @@ function ServingCard({
 }
 
 // -- rows -----------------------------------------------------------------------
-
-const pill = "px-2 py-0.5 text-xs";
 
 function ModelRow({
   model,
@@ -345,22 +344,22 @@ function ModelRow({
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-sm font-semibold">{model.version}</span>
-          {active && <Badge className={`${pill} bg-primary/10 text-primary`}>Active</Badge>}
+          {active && <Badge variant="primary">Active</Badge>}
           {!model.servable && (
-            <Badge className={`${pill} bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400`}>
+            <Badge variant="destructive">
               <Ban className="h-3 w-3" aria-hidden="true" />
               Cannot be served
             </Badge>
           )}
           {model.servable && !model.calibrated && (
-            <Badge className={`${pill} bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300`}>
+            <Badge variant="warning">
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
               Uncalibrated
             </Badge>
           )}
         </div>
         <p className="text-sm text-muted-foreground">{facts.join(" · ")}</p>
-        {model.problem && <p className="text-sm text-red-700 dark:text-red-400">{model.problem}</p>}
+        {model.problem && <p className="text-sm text-destructive">{model.problem}</p>}
         <p className="truncate font-mono text-xs text-muted-foreground/80" title={model.path}>
           {model.path}
         </p>
@@ -426,10 +425,10 @@ function JobStatus({ job }: { job: EvalJob }) {
         : job.status === "cancelled"
           ? [Ban, "text-muted-foreground", "Cancelled"]
           : job.status === "failed"
-            ? [XCircle, "text-red-700 dark:text-red-400", "Did not finish"]
+            ? [XCircle, "text-destructive", "Did not finish"]
             : job.verdict === "fail"
-              ? [XCircle, "text-red-700 dark:text-red-400", "Failed"]
-              : [CheckCircle2, "text-emerald-700 dark:text-emerald-400", job.verdict === "pass" ? "Passed" : "Done"];
+              ? [XCircle, "text-destructive", "Failed"]
+              : [CheckCircle2, "text-success", job.verdict === "pass" ? "Passed" : "Done"];
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${tone}`}>
       <Icon className={`h-4 w-4 shrink-0 ${job.status === "running" ? "animate-spin" : ""}`} aria-hidden="true" />
@@ -542,14 +541,12 @@ function Section({ title, count, children }: { title: string; count?: number; ch
     <section className="space-y-3">
       <h2 className="flex items-center gap-2 text-base font-semibold">
         {title}
-        {count != null && <Badge className={`${pill} bg-muted text-muted-foreground`}>{count}</Badge>}
+        {count != null && <Badge>{count}</Badge>}
       </h2>
       {children}
     </section>
   );
 }
-
-const listClass = "divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm";
 
 // -- the panel ------------------------------------------------------------------
 
@@ -703,22 +700,22 @@ export default function ModelsPanel() {
   return (
     <div className="space-y-8">
       {!canChange && (
-        <p className="flex items-start gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
-          <Ban className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <Alert icon={Ban}>
           Model management is switched off on this backend (PEACE_MODEL_ADMIN=false). This page shows what is
           served; changing it and running evals happen on a backend that has it on.
-        </p>
+        </Alert>
       )}
       {notice && (
-        <p
-          role="alert"
-          className="flex items-start justify-between gap-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400"
+        <Alert
+          variant="destructive"
+          action={
+            <Button variant="link" size="xs" className="h-auto p-0 text-current" onClick={() => setNotice(null)}>
+              Dismiss
+            </Button>
+          }
         >
-          <span>{notice}</span>
-          <button type="button" className="shrink-0 font-medium underline-offset-2 hover:underline" onClick={() => setNotice(null)}>
-            Dismiss
-          </button>
-        </p>
+          {notice}
+        </Alert>
       )}
 
       <ServingCard
@@ -738,7 +735,7 @@ export default function ModelsPanel() {
             folder in <code className="font-mono text-xs">ml-backend/app/models/landmarks/</code>.
           </Card>
         ) : (
-          <ul className={listClass}>
+          <List>
             {models.map((model) => (
               <ModelRow
                 key={model.version}
@@ -752,13 +749,13 @@ export default function ModelsPanel() {
                 onStart={(choice) => startEval(model.version, choice)}
               />
             ))}
-          </ul>
+          </List>
         )}
       </Section>
 
       {experiments.length > 0 && (
         <Section title="Training runs" count={experiments.length}>
-          <ul className={listClass}>
+          <List>
             {experiments.map((exp) => (
               <ExperimentRow
                 key={exp.name}
@@ -769,7 +766,7 @@ export default function ModelsPanel() {
                 onStart={(choice) => startEval(exp.name, choice)}
               />
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
@@ -786,7 +783,7 @@ export default function ModelsPanel() {
         {jobs.length === 0 ? (
           <Card className="p-8 text-center text-sm text-muted-foreground">No evals have been run yet.</Card>
         ) : (
-          <ul className={listClass}>
+          <List>
             {jobs.map((job) => (
               <JobRow
                 key={job.id}
@@ -799,7 +796,7 @@ export default function ModelsPanel() {
                 onCancel={() => cancel(job)}
               />
             ))}
-          </ul>
+          </List>
         )}
       </Section>
 

@@ -95,7 +95,7 @@ describe("ColonMap", () => {
     const { container } = render(<ColonMap currentSegment="transverse" />);
     const circle = container.querySelector("circle");
     expect(circle).not.toBeNull();
-    expect(circle?.getAttribute("fill")).toBe("#ef4444");
+    expect(circle).toHaveClass("fill-destructive");
   });
 
   it("does not render marker when no current segment", () => {

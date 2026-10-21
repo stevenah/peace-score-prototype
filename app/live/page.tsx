@@ -6,7 +6,9 @@ import { LiveFeedViewer } from "@/components/video/LiveFeedViewer";
 import { MotionIndicator } from "@/components/analysis/MotionIndicator";
 import { PeaceScoreCard } from "@/components/scoring/PeaceScoreCard";
 import { ScoreTimelineBar } from "@/components/scoring/ScoreTimelineBar";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { Card, CardEyebrow } from "@/components/ui/Card";
 import { useLiveFeed } from "@/hooks/useLiveFeed";
 import type { PeaceScore, MotionDirection, TimelineEntry } from "@/lib/types";
 
@@ -36,30 +38,23 @@ export default function LivePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Live Feed
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real-time PEACE score analysis from camera
-          </p>
-        </div>
-        <Button
-          onClick={handleToggle}
-          variant={isActive ? "secondary" : "default"}
-        >
-          {isActive ? (
-            <>
-              <VideoOff className="h-4 w-4" /> Stop
-            </>
-          ) : (
-            <>
-              <Video className="h-4 w-4" /> Start
-            </>
-          )}
-        </Button>
-      </div>
+      <PageHeader
+        title="Live Feed"
+        description="Real-time PEACE score analysis from camera"
+        actions={
+          <Button onClick={handleToggle} variant={isActive ? "secondary" : "default"}>
+            {isActive ? (
+              <>
+                <VideoOff /> Stop
+              </>
+            ) : (
+              <>
+                <Video /> Start
+              </>
+            )}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -80,33 +75,29 @@ export default function LivePage() {
               />
 
               {latestResult.motion && (
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Motion
-                  </p>
+                <Card className="p-4">
+                  <CardEyebrow className="mb-2">Motion</CardEyebrow>
                   <MotionIndicator
                     direction={latestResult.motion.direction as MotionDirection}
                   />
-                </div>
+                </Card>
               )}
 
               {latestResult.region && (
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Region
-                  </p>
+                <Card className="p-4">
+                  <CardEyebrow className="mb-2">Region</CardEyebrow>
                   <p className="text-base font-medium capitalize text-foreground">
                     {latestResult.region}
                   </p>
-                </div>
+                </Card>
               )}
             </>
           ) : (
-            <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <Card className="p-8 text-center">
               <p className="text-sm text-muted-foreground/60">
                 {isActive ? "Waiting for first frame..." : "Start the feed to begin"}
               </p>
-            </div>
+            </Card>
           )}
         </div>
       </div>

@@ -34,18 +34,18 @@ export function RegionMap({ byRegion }: RegionMapProps) {
         {REGION_ORDER.map((region) => {
           const data = byRegion[region];
           const path = regionPaths[region];
+          // Unscored regions take the idle token so they match the theme.
           const color = data
             ? PEACE_SCORE_COLORS[data.score as PeaceScore]
-            : "#d4d4d4";
+            : "var(--peace-idle)";
 
           return (
             <g key={region}>
               <path
                 d={path.d}
-                fill={color}
                 fillOpacity={0.3}
-                stroke={color}
                 strokeWidth={2}
+                style={{ fill: color, stroke: color }}
               />
               <text
                 x={region === "duodenum" ? 195 : 120}
@@ -69,7 +69,7 @@ export function RegionMap({ byRegion }: RegionMapProps) {
           return (
             <div key={region} className="flex items-center gap-2.5">
               <div
-                className="h-3 w-3 rounded-full"
+                className="size-3 rounded-full"
                 style={{ backgroundColor: color }}
               />
               <span className="text-sm text-foreground/80">

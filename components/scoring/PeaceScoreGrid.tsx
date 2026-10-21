@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { PeaceScoreCard } from "./PeaceScoreCard";
+import { Card, CardEyebrow } from "@/components/ui/Card";
 import { REGION_LABELS, REGION_ORDER } from "@/lib/constants";
 import type { AnatomicalRegion, PeaceScore, RegionScore } from "@/lib/types";
 
@@ -14,13 +15,8 @@ export const PeaceScoreGrid = memo(function PeaceScoreGrid({ byRegion }: PeaceSc
         const data = byRegion[region];
         if (!data) {
           return (
-            <div
-              key={region}
-              className="rounded-xl border border-border bg-card p-5"
-            >
-              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {REGION_LABELS[region]}
-              </p>
+            <Card key={region}>
+              <CardEyebrow className="mb-2">{REGION_LABELS[region]}</CardEyebrow>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-muted-foreground/30">
                   —
@@ -30,7 +26,7 @@ export const PeaceScoreGrid = memo(function PeaceScoreGrid({ byRegion }: PeaceSc
               <p className="mt-0.5 text-sm font-medium text-muted-foreground/30">
                 No data
               </p>
-            </div>
+            </Card>
           );
         }
         return (

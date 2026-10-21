@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { ScoreLegend } from "./ScoreLegend";
+import { Badge } from "@/components/ui/Badge";
 import { PEACE_SCORE_COLORS, MOTION_LABELS, REGION_LABELS } from "@/lib/constants";
 import type { PeaceScore, TimelineEntry, MotionDirection, AnatomicalRegion } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
@@ -139,10 +140,10 @@ export const ScoreTimelineBar = memo(function ScoreTimelineBar({
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-foreground/80">Score Timeline</h3>
           {alerts.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+            <Badge variant="destructive">
+              <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-current" />
               {alerts.length} alert{alerts.length !== 1 ? "s" : ""}
-            </span>
+            </Badge>
           )}
         </div>
         <ScoreLegend />
@@ -199,7 +200,7 @@ export const ScoreTimelineBar = memo(function ScoreTimelineBar({
                   style={{ left: `${left}%`, top: 0 }}
                 >
                   <svg width="8" height="8" viewBox="0 0 8 8">
-                    <polygon points="4,8 8,0 0,0" fill="#ef4444" />
+                    <polygon points="4,8 8,0 0,0" className="fill-destructive" />
                   </svg>
                 </div>
               );
@@ -214,7 +215,7 @@ export const ScoreTimelineBar = memo(function ScoreTimelineBar({
             style={tooltipStyle}
           >
             {hoverInfo.segment.isAlert && (
-              <p className="mb-1 font-semibold text-red-500">
+              <p className="mb-1 font-semibold text-destructive">
                 Warning: Insufficient cleaning during withdrawal
               </p>
             )}

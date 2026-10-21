@@ -93,8 +93,8 @@ export function VideoUploader({
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 transition-colors",
           isDragOver
-            ? "border-primary bg-primary/5 dark:bg-primary/10"
-            : "border-border hover:border-primary/40 dark:border-border dark:hover:border-primary/40",
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/40",
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
@@ -122,7 +122,7 @@ export function VideoUploader({
       </div>
 
       {error && (
-        <p className="whitespace-pre-line text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p role="alert" className="whitespace-pre-line text-sm text-destructive">{error}</p>
       )}
 
     </div>

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { Card, CardEyebrow } from "@/components/ui/Card";
 import { PEACE_SCORE_COLORS, PEACE_SCORE_LABELS } from "@/lib/constants";
 import type { PeaceScore } from "@/lib/types";
 
@@ -19,12 +20,8 @@ export const PeaceScoreCard = memo(function PeaceScoreCard({
   const scoreLabel = label || PEACE_SCORE_LABELS[score];
 
   return (
-    <div
-      className="rounded-xl border border-border bg-card p-6 shadow-sm ring-1 ring-black/3 dark:ring-white/3"
-    >
-      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {region || "PEACE Score"}
-      </p>
+    <Card>
+      <CardEyebrow className="mb-2">{region || "PEACE Score"}</CardEyebrow>
       <div className="flex items-baseline gap-2">
         <span
           className={`font-bold ${size === "lg" ? "text-4xl" : "text-2xl"}`}
@@ -40,6 +37,6 @@ export const PeaceScoreCard = memo(function PeaceScoreCard({
       >
         {scoreLabel}
       </p>
-    </div>
+    </Card>
   );
 });

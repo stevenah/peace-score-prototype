@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, Shield } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +35,7 @@ export function Header() {
   const isAuthPage = pathname === "/login";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 shadow-[0_1px_3px_0_rgb(0_0_0/0.04)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <svg
@@ -74,13 +75,13 @@ export function Header() {
             {session && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu">
                     <Avatar size="sm">
                       <AvatarFallback>
                         {getInitials(session.user?.name, session.user?.email)}
                       </AvatarFallback>
                     </Avatar>
-                  </button>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
@@ -98,20 +99,18 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   {session.user?.role === "ADMIN" && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin">
-                          <Shield className="mr-2 h-4 w-4" />
-                          Admin Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Shield />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => signOut({ callbackUrl: "/login", redirect: true })}
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

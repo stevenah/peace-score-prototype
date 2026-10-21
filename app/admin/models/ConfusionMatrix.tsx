@@ -4,12 +4,12 @@ import { useState } from "react";
 import { fmtPercent, rowShares, stationLabel, stationShort } from "@/lib/model-admin";
 
 /**
- * One hue, surface to blue: the share of a true station's clips that landed in
- * each predicted station. The ramp stops at 75% blue so the theme's own text
+ * One hue, surface to primary: the share of a true station's clips that landed in
+ * each predicted station. The ramp stops at 75% primary so the theme's own text
  * colour keeps at least 4.7:1 on every cell, in both themes.
  */
 function heat(share: number): string {
-  return `color-mix(in oklab, var(--clinical-blue) ${(share * 75).toFixed(1)}%, var(--card))`;
+  return `color-mix(in oklab, var(--primary) ${(share * 75).toFixed(1)}%, var(--card))`;
 }
 
 interface ConfusionMatrixProps {

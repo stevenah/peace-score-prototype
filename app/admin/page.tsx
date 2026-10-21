@@ -4,10 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Search, Shield, Pencil, RotateCcw, Dices, Trash2, ClipboardList, Boxes } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Progress } from "@/components/ui/Progress";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { Progress, type ProgressTone } from "@/components/ui/Progress";
+import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import AuditLogPanel from "./AuditLogPanel";
@@ -33,11 +39,6 @@ interface AdminUser {
   createdAt: string;
   _count: { analyses: number };
 }
-
-const inputClass =
-  "mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30 dark:text-foreground";
-
-const labelClass = "block text-sm font-medium text-foreground/80";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -212,11 +213,11 @@ export default function AdminPage() {
     return Math.min(100, (user.uploadCount / user.uploadLimit) * 100);
   }
 
-  function getUsageColor(user: AdminUser) {
+  function getUsageTone(user: AdminUser): ProgressTone {
     const pct = getUsagePercent(user);
-    if (pct >= 100) return "var(--color-red-500, #ef4444)";
-    if (pct >= 80) return "var(--color-amber-500, #f59e0b)";
-    return "var(--clinical-blue, #3b82f6)";
+    if (pct >= 100) return "destructive";
+    if (pct >= 80) return "warning";
+    return "primary";
   }
 
   if (status === "loading" || isLoading) {
@@ -238,33 +239,32 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">
-            Admin Dashboard
-          </h1>
-          {activeTab === "users" && (
-            <Badge className="text-xs bg-muted text-muted-foreground">
+      <PageHeader
+        icon={Shield}
+        title="Admin Dashboard"
+        meta={
+          activeTab === "users" && (
+            <Badge>
               {users.length} user{users.length !== 1 ? "s" : ""}
             </Badge>
-          )}
-        </div>
-        {activeTab === "users" && (
-          <Button onClick={() => setShowAddUser(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-        )}
-      </div>
+          )
+        }
+        actions={
+          activeTab === "users" && (
+            <Button onClick={() => setShowAddUser(true)}>
+              <Plus />
+              Add User
+            </Button>
+          )
+        }
+      />
 
       {/* Tabs */}
       <Tabs
         tabs={[
-          { id: "users", label: "Users", icon: <Users className="h-4 w-4" /> },
-          { id: "models", label: "Models", icon: <Boxes className="h-4 w-4" /> },
-          { id: "audit", label: "Audit Log", icon: <ClipboardList className="h-4 w-4" /> },
+          { id: "users", label: "Users", icon: <Users className="size-4" /> },
+          { id: "models", label: "Models", icon: <Boxes className="size-4" /> },
+          { id: "audit", label: "Audit Log", icon: <ClipboardList className="size-4" /> },
         ]}
         activeTab={activeTab}
         onChange={setActiveTab}
@@ -278,24 +278,23 @@ export default function AdminPage() {
       <>
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
+        <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          aria-label="Search users"
           placeholder="Search users by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className={`${inputClass} pl-9`}
+          className="pl-9"
         />
       </div>
 
       {/* Users grid */}
       {users.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Users className="mx-auto h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            {search ? "No users match your search" : "No users found"}
-          </p>
-        </Card>
+        <EmptyState
+          icon={Users}
+          description={search ? "No users match your search" : "No users found"}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {users.map((user) => (
@@ -311,17 +310,14 @@ export default function AdminPage() {
                     </p>
                   </div>
                   <Badge
-                    className={`ml-2 shrink-0 text-xs ${
-                      user.role === "ADMIN"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    variant={user.role === "ADMIN" ? "primary" : "default"}
+                    className="ml-2 shrink-0"
                   >
                     {user.role}
                   </Badge>
                 </div>
               </CardHeader>
-              <div className="space-y-3 px-6 pb-5">
+              <div className="space-y-3">
                 {/* Usage */}
                 <div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -335,7 +331,7 @@ export default function AdminPage() {
                   </div>
                   <Progress
                     value={getUsagePercent(user)}
-                    color={getUsageColor(user)}
+                    tone={getUsageTone(user)}
                     className="mt-1.5"
                   />
                 </div>
@@ -357,26 +353,27 @@ export default function AdminPage() {
                     className="flex-1"
                     onClick={() => openEditDialog(user)}
                   >
-                    <Pencil className="mr-1.5 h-3 w-3" />
+                    <Pencil />
                     Edit
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     onClick={() => handleResetCount(user)}
                     title="Reset upload count"
+                    aria-label="Reset upload count"
                   >
-                    <RotateCcw className="h-3 w-3" />
+                    <RotateCcw />
                   </Button>
                   {user.id !== session?.user?.id && (
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="ghost-destructive"
+                      size="icon-sm"
                       onClick={() => setDeletingUser(user)}
                       title="Delete user"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                      aria-label="Delete user"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 />
                     </Button>
                   )}
                 </div>
@@ -403,113 +400,85 @@ export default function AdminPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            <div className="my-4 space-y-3">
-              {formError && (
-                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                  {formError}
-                </p>
-              )}
+            <div className="my-4 space-y-4">
+              {formError && <Alert variant="destructive">{formError}</Alert>}
 
-              <div>
-                <label htmlFor="add-name" className={labelClass}>
-                  Name
-                </label>
-                <input
+              <Field label="Name" htmlFor="add-name">
+                <Input
                   id="add-name"
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className={inputClass}
                   placeholder="John Doe"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label htmlFor="add-email" className={labelClass}>
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
+              <Field label="Email" htmlFor="add-email" required>
+                <Input
                   id="add-email"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
-                  className={inputClass}
                   placeholder="user@example.com"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label htmlFor="add-password" className={labelClass}>
-                  Password
-                </label>
+              <Field label="Password" htmlFor="add-password">
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     id="add-password"
                     type={newPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     minLength={newPassword ? 6 : undefined}
-                    className={`${inputClass} flex-1`}
                     placeholder="Leave blank to let user set on first login"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="mt-1 shrink-0"
+                    size="icon"
+                    className="shrink-0"
                     onClick={() => setNewPassword(generatePassword())}
                     title="Generate random password"
+                    aria-label="Generate random password"
                   >
-                    <Dices className="h-4 w-4" />
+                    <Dices />
                   </Button>
                 </div>
-              </div>
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="add-role" className={labelClass}>
-                    Role
-                  </label>
-                  <select
+                <Field label="Role" htmlFor="add-role">
+                  <Select
                     id="add-role"
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    className={inputClass}
                   >
                     <option value="USER">User</option>
                     <option value="ADMIN">Admin</option>
-                  </select>
-                </div>
+                  </Select>
+                </Field>
 
-                <div>
-                  <label htmlFor="add-limit" className={labelClass}>
-                    Upload Limit
-                  </label>
-                  <input
+                <Field label="Upload Limit" htmlFor="add-limit" hint="-1 = unlimited">
+                  <Input
                     id="add-limit"
                     type="number"
                     value={newLimit}
                     onChange={(e) => setNewLimit(parseInt(e.target.value) || 0)}
-                    className={inputClass}
                     min={-1}
                   />
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    -1 = unlimited
-                  </p>
-                </div>
+                </Field>
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={newForcePasswordChange}
                   onChange={(e) => setNewForcePasswordChange(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-ring/30"
+                  className="size-4 accent-primary"
                 />
-                <span className="text-sm text-foreground/80">
-                  Require password change on first login
-                </span>
+                Require password change on first login
               </label>
             </div>
 
@@ -546,9 +515,9 @@ export default function AdminPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={handleDeleteUser}
               disabled={isSubmitting}
-              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
             >
               {isSubmitting ? "Deleting..." : "Delete User"}
             </AlertDialogAction>
@@ -572,107 +541,84 @@ export default function AdminPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="my-4 space-y-3">
-            {editError && (
-              <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
-                {editError}
-              </p>
-            )}
+          <div className="my-4 space-y-4">
+            {editError && <Alert variant="destructive">{editError}</Alert>}
 
-            <div>
-              <label htmlFor="edit-name" className={labelClass}>
-                Name
-              </label>
-              <input
+            <Field label="Name" htmlFor="edit-name">
+              <Input
                 id="edit-name"
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className={inputClass}
                 placeholder="John Doe"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="edit-email" className={labelClass}>
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
+            <Field label="Email" htmlFor="edit-email" required>
+              <Input
                 id="edit-email"
                 type="email"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 required
-                className={inputClass}
                 placeholder="user@example.com"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="edit-password" className={labelClass}>
-                New Password
-              </label>
+            <Field label="New Password" htmlFor="edit-password">
               <div className="flex gap-2">
-                <input
+                <Input
                   id="edit-password"
                   type={editPassword ? "text" : "password"}
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
                   minLength={6}
-                  className={`${inputClass} flex-1`}
                   placeholder="Leave blank to keep current"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className="mt-1 shrink-0"
+                  size="icon"
+                  className="shrink-0"
                   onClick={() => setEditPassword(generatePassword())}
                   title="Generate random password"
+                  aria-label="Generate random password"
                 >
-                  <Dices className="h-4 w-4" />
+                  <Dices />
                 </Button>
               </div>
-            </div>
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="edit-role" className={labelClass}>
-                  Role
-                </label>
-                <select
+              <Field
+                label="Role"
+                htmlFor="edit-role"
+                hint={editingUser?.id === session?.user?.id ? "You cannot change your own role" : undefined}
+              >
+                <Select
                   id="edit-role"
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
-                  className={inputClass}
                   disabled={editingUser?.id === session?.user?.id}
                 >
                   <option value="USER">User</option>
                   <option value="ADMIN">Admin</option>
-                </select>
-                {editingUser?.id === session?.user?.id && (
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    You cannot change your own role
-                  </p>
-                )}
-              </div>
+                </Select>
+              </Field>
 
-              <div>
-                <label htmlFor="edit-limit" className={labelClass}>
-                  Upload Limit
-                </label>
-                <input
+              <Field
+                label="Upload Limit"
+                htmlFor="edit-limit"
+                hint={`-1 = unlimited, usage: ${editingUser?.uploadCount ?? 0}`}
+              >
+                <Input
                   id="edit-limit"
                   type="number"
                   value={editLimit}
                   onChange={(e) => setEditLimit(parseInt(e.target.value) || 0)}
-                  className={inputClass}
                   min={-1}
                 />
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  -1 = unlimited, usage: {editingUser?.uploadCount ?? 0}
-                </p>
-              </div>
+              </Field>
             </div>
           </div>
 

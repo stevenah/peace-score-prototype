@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BackLink } from "@/components/layout/BackLink";
 
 export default function AdminLayout({
   children,
@@ -7,16 +6,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
-      <div className="mb-4">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </div>
+    <div className="space-y-4">
+      <BackLink href="/dashboard">Back to Dashboard</BackLink>
       {children}
     </div>
   );

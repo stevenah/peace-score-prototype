@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Pause } from "lucide-react";
-import { MOTION_COLORS, MOTION_LABELS } from "@/lib/constants";
+import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { MOTION_LABELS } from "@/lib/constants";
 import type { MotionDirection } from "@/lib/types";
 
 interface MotionIndicatorProps {
@@ -12,17 +13,21 @@ const icons = {
   stationary: Pause,
 };
 
+/** Withdrawal is the phase that carries the cleaning alert, so it takes the
+ *  warning tone; insertion is routine (primary); stationary is neutral. */
+export const MOTION_VARIANTS: Record<MotionDirection, BadgeVariant> = {
+  insertion: "primary",
+  withdrawal: "warning",
+  stationary: "default",
+};
+
 export function MotionIndicator({ direction }: MotionIndicatorProps) {
   const Icon = icons[direction];
-  const color = MOTION_COLORS[direction];
 
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium"
-      style={{ color, backgroundColor: `${color}15` }}
-    >
-      <Icon className="h-3.5 w-3.5" />
+    <Badge variant={MOTION_VARIANTS[direction]} className="px-3 py-1 text-sm [&>svg]:size-3.5">
+      <Icon aria-hidden="true" />
       {MOTION_LABELS[direction]}
-    </span>
+    </Badge>
   );
 }

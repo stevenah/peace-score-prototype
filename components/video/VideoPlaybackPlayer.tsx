@@ -213,13 +213,13 @@ export const VideoPlaybackPlayer = forwardRef<
         />
 
         {showWithdrawalWarning && (
-          <div className="pointer-events-none absolute inset-0 animate-[flash-red_1s_ease-in-out_infinite] border-[6px] border-red-500/0">
-            <div className="absolute inset-0 animate-[flash-red-bg_1s_ease-in-out_infinite] bg-red-500/0" />
+          <div className="pointer-events-none absolute inset-0 animate-[flash-red_1s_ease-in-out_infinite] border-[6px] border-transparent">
+            <div className="absolute inset-0 animate-[flash-red-bg_1s_ease-in-out_infinite] bg-transparent" />
           </div>
         )}
 
         {showWithdrawalWarning && (
-          <div className="absolute left-1/2 top-6 flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
+          <div className="absolute left-1/2 top-6 flex -translate-x-1/2 animate-pulse items-center gap-2 rounded-full bg-destructive/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
             <AlertTriangle className="h-5 w-5" />
             <span className="text-sm font-semibold">
               Insufficient cleaning — withdrawing
@@ -301,7 +301,8 @@ export const VideoPlaybackPlayer = forwardRef<
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <button
               onClick={handlePlay}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-lg transition-transform hover:scale-110"
+              aria-label="Play"
+              className="flex size-16 items-center justify-center rounded-full bg-white/90 text-black shadow-lg transition-transform hover:scale-110"
             >
               <Play className="ml-1 h-7 w-7" />
             </button>
@@ -313,7 +314,8 @@ export const VideoPlaybackPlayer = forwardRef<
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <button
               onClick={handlePlay}
-              className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-xl transition-transform hover:scale-110"
+              aria-label="Play"
+              className="flex size-20 items-center justify-center rounded-full bg-white/90 text-black shadow-xl transition-transform hover:scale-110"
             >
               <Play className="ml-1 h-9 w-9" />
             </button>
@@ -374,7 +376,7 @@ export const VideoPlaybackPlayer = forwardRef<
                 />
               </div>
               <div
-                className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100 dark:border-card"
+                className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary opacity-0 shadow transition-opacity group-hover:opacity-100"
                 style={{ left: `${progress}%` }}
               />
             </div>

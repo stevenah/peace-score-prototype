@@ -4,6 +4,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Design tokens.
+
+   Every colour the app paints with is one of these. Components never reach
+   for Tailwind's raw palette (red-500, emerald-100, ...): the semantic tokens
+   below carry light, dark and workstation values, so a component written once
+   is correct in all three without dark: variants.
+
+     surfaces   background, card, popover, muted, accent, secondary
+     ink        foreground, muted-foreground, *-foreground
+     accent     primary
+     status     success, warning, destructive
+     clinical   peace-0..3, peace-idle (the PEACE scale)
+   ───────────────────────────────────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -25,12 +39,15 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
-  --color-clinical-blue: var(--clinical-blue);
-  --color-clinical-blue-light: var(--clinical-blue-light);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
 
   /* PEACE scale — as tokens, so fill-/stroke-/text- utilities and alpha
-     modifiers all work. The raw hex map in lib/constants.ts stays for the
-     light-theme pages. */
+     modifiers all work. lib/constants.ts carries the same values as hex for
+     SVG attributes and tests. */
   --color-peace-0: var(--peace-0);
   --color-peace-1: var(--peace-1);
   --color-peace-2: var(--peace-2);
@@ -53,7 +70,6 @@
   --color-ws-detect: var(--ws-detect);
   --color-ws-organ: var(--ws-organ);
   --color-ws-organ-idle: var(--ws-organ-idle);
-  --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -73,6 +89,19 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Indeterminate progress: a third-width bar sliding left to right. */
+  --animate-indeterminate: indeterminate 1.5s ease-in-out infinite alternate;
+  @keyframes indeterminate {
+    from {
+      margin-left: 0;
+      width: 33%;
+    }
+    to {
+      margin-left: 67%;
+      width: 33%;
+    }
+  }
 }
 
 :root {
@@ -92,11 +121,11 @@
   --accent: oklch(0.95 0.02 250);
   --accent-foreground: oklch(0.35 0.12 250);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.52 0.15 150);
+  --warning: oklch(0.55 0.14 65);
   --border: oklch(0.90 0.01 250);
   --input: oklch(0.90 0.01 250);
   --ring: oklch(0.60 0.15 250);
-  --clinical-blue: oklch(0.55 0.20 250);
-  --clinical-blue-light: oklch(0.93 0.04 250);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -110,6 +139,13 @@
   --sidebar-accent-foreground: oklch(0.35 0.12 250);
   --sidebar-border: oklch(0.90 0.01 250);
   --sidebar-ring: oklch(0.60 0.15 250);
+
+  /* PEACE 0-3 on light surfaces. Same values as PEACE_SCORE_COLORS. */
+  --peace-0: #ef4444;
+  --peace-1: #f97316;
+  --peace-2: #84cc16;
+  --peace-3: #22c55e;
+  --peace-idle: oklch(0.85 0 0);
 }
 
 .dark {
@@ -128,11 +164,11 @@
   --accent: oklch(0.28 0.03 250);
   --accent-foreground: oklch(0.90 0.04 250);
   --destructive: oklch(0.704 0.191 22.216);
+  --success: oklch(0.76 0.16 155);
+  --warning: oklch(0.80 0.14 75);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.55 0.14 250);
-  --clinical-blue: oklch(0.65 0.18 250);
-  --clinical-blue-light: oklch(0.30 0.05 250);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -146,6 +182,7 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.55 0.14 250);
+  --peace-idle: oklch(0.4 0 0);
 }
 
 @layer base {
@@ -159,13 +196,13 @@
 
 /* Withdrawal warning flash animations */
 @keyframes flash-red {
-  0%, 100% { border-color: rgb(239 68 68 / 0); }
-  50% { border-color: rgb(239 68 68 / 0.8); }
+  0%, 100% { border-color: transparent; }
+  50% { border-color: color-mix(in oklab, var(--destructive) 80%, transparent); }
 }
 
 @keyframes flash-red-bg {
-  0%, 100% { background-color: rgb(239 68 68 / 0); }
-  50% { background-color: rgb(239 68 68 / 0.15); }
+  0%, 100% { background-color: transparent; }
+  50% { background-color: color-mix(in oklab, var(--destructive) 15%, transparent); }
 }
 
 
@@ -228,8 +265,8 @@
   --primary: var(--ws-detect);
   --primary-foreground: oklch(0.16 0 0);
   --destructive: var(--ws-alert);
-  --clinical-blue: var(--ws-detect);
-  --clinical-blue-light: var(--ws-raised);
+  --success: var(--peace-3);
+  --warning: var(--ws-coach);
 
   /* Flat device: no rounded corners anywhere. */
   --radius: 0px;
