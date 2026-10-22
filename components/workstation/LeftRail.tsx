@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useId, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { REGION_LABELS, REGION_ORDER } from "@/lib/constants";
 import {
   selectCoverage,
@@ -50,6 +51,10 @@ export function LeftRail({ dimmed }: { dimmed: boolean }) {
   const stations = useProcedureSlice(selectStations);
   const ended = useProcedureSlice(selectEnded);
   const store = useProcedureStore();
+  // The station list is folded away by default: the figure above carries the
+  // same ten states as pins, and the list is for marking, not for watching.
+  const [listOpen, setListOpen] = useState(false);
+  const listId = useId();
 
   const hasData = coverage.framesAnalysed > 0;
   const onTarget = timers.totalProgress >= 1;
@@ -209,15 +214,13 @@ export function LeftRail({ dimmed }: { dimmed: boolean }) {
         </div>
       )}
 
-      <StationsErrorBoundary>
-        <StationChecklist
-          stations={stations}
-          ended={ended}
-          onToggle={toggleStation}
-        />
-      </StationsErrorBoundary>
-
-      <div className="mt-auto flex min-h-0 shrink-0 justify-center pt-3">
+      {/* The figure comes before the list it summarises; without a list it
+          keeps the foot of the rail. */}
+      <div
+        className={`flex min-h-0 shrink-0 justify-center ${
+          stations.visible ? "" : "mt-auto pt-3"
+        }`}
+      >
         <CoverageMap
           states={coverageStates}
           stations={stationMarks}
@@ -225,6 +228,33 @@ export function LeftRail({ dimmed }: { dimmed: boolean }) {
           className={stations.visible ? "h-[150px] w-auto" : "h-[200px] w-auto"}
         />
       </div>
+
+      {stations.visible && (
+        <button
+          type="button"
+          aria-expanded={listOpen}
+          aria-controls={listId}
+          onClick={() => setListOpen((open) => !open)}
+          className="ws-micro inline-flex items-center gap-1 self-start text-ws-label transition-colors hover:text-ws-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-ws-detect"
+        >
+          <ChevronRight
+            aria-hidden="true"
+            className={`size-3 transition-transform ${listOpen ? "rotate-90" : ""}`}
+          />
+          {listOpen ? "Hide station list" : "Show station list"}
+        </button>
+      )}
+
+      <StationsErrorBoundary>
+        {(!stations.visible || listOpen) && (
+          <StationChecklist
+            id={listId}
+            stations={stations}
+            ended={ended}
+            onToggle={toggleStation}
+          />
+        )}
+      </StationsErrorBoundary>
     </aside>
   );
 }

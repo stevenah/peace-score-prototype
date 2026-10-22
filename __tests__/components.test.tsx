@@ -512,7 +512,11 @@ describe("LeftRail with stations", () => {
     // "Frames analysed" moves from the hero to the micro line.
     expect(screen.queryByText("Frames analysed:")).toBeNull();
     expect(hero).toHaveTextContent("Frames analysed 1");
+    // The list is folded by default; the figure's pins carry the states.
+    expect(screen.queryByRole("region", { name: "ESGE station checklist" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show station list" }));
     expect(screen.getByRole("region", { name: "ESGE station checklist" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide station list" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("shows nothing station-related in shadow mode", () => {
@@ -539,6 +543,7 @@ describe("LeftRail with stations", () => {
     expect(pin("incisura")).toBe("unseen");
 
     // A manual mark on the row moves the pin with it.
+    fireEvent.click(screen.getByRole("button", { name: "Show station list" }));
     fireEvent.click(screen.getByRole("button", { name: /^Incisura angularis — not yet observed/ }));
     expect(pin("incisura")).toBe("confirmed");
   });
@@ -556,6 +561,7 @@ describe("LeftRail with stations", () => {
     const store = new ProcedureStore();
     store.ingest(landmarkFrame(0, { observed: ["antrum"] }));
     renderRail(store);
+    fireEvent.click(screen.getByRole("button", { name: "Show station list" }));
     fireEvent.click(screen.getByRole("button", { name: /^Antrum — observed/ }));
     expect(store.getSnapshot().stations.manual[STATION_INDEX.antrum]).toBe("confirmed");
     fireEvent.click(screen.getByRole("button", { name: "Antrum — confirmed manually" }));

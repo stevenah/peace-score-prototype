@@ -53,6 +53,12 @@ import { LiveWorkstationRun } from "@/components/workstation/LiveWorkstationRun"
 import { saveLiveAnalysis, updateLiveStations } from "@/lib/api-client";
 import { STATION_INDEX } from "@/lib/live/stations";
 
+/** The rail folds the station list away by default; open it when it is closed. */
+function openStationList() {
+  const toggle = screen.queryByRole("button", { name: "Show station list" });
+  if (toggle) fireEvent.click(toggle);
+}
+
 const save = vi.mocked(saveLiveAnalysis);
 const patch = vi.mocked(updateLiveStations);
 
@@ -163,6 +169,8 @@ describe("LiveWorkstationRun — stations wiring", () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(patch).not.toHaveBeenCalled();
 
+    openStationList();
+
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Incisura angularis — not yet observed" }));
     });
@@ -181,8 +189,10 @@ describe("LiveWorkstationRun — stations wiring", () => {
       await act(async () => video.props!.onVideoEnd!());
       patch.mockRejectedValueOnce(new Error("503"));
 
+      openStationList();
+
       await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "Incisura angularis — not yet observed" }));
+      fireEvent.click(screen.getByRole("button", { name: "Incisura angularis — not yet observed" }));
       });
       expect(patch).toHaveBeenCalledTimes(1);
       expect(screen.getByText("Save failed")).toBeInTheDocument();
@@ -225,6 +235,7 @@ describe("LiveWorkstationRun — stations wiring", () => {
     expect(screen.getByText("Save failed")).toBeInTheDocument();
 
     // Nothing saved yet, so nothing to PATCH: the retried save carries it.
+    openStationList();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Incisura angularis — not yet observed" }));
     });

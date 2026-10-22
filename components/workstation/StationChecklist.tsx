@@ -204,6 +204,8 @@ function StationGlyph({ state }: { state: StationRowState }) {
 }
 
 interface StationChecklistProps {
+  /** For the rail's show/hide control (aria-controls). */
+  id?: string;
   stations: StationsSlice;
   /** After the procedure ends, stations still unobserved turn amber. */
   ended?: boolean;
@@ -222,7 +224,7 @@ interface StationChecklistProps {
  * Renders nothing unless stations are visible: in shadow mode, or with the
  * feature off, the rail is exactly what it was before this component existed.
  */
-export function StationChecklist({ stations, ended = false, onToggle }: StationChecklistProps) {
+export function StationChecklist({ id, stations, ended = false, onToggle }: StationChecklistProps) {
   const hintId = useId();
 
   if (!stations.visible) {
@@ -241,7 +243,7 @@ export function StationChecklist({ stations, ended = false, onToggle }: StationC
   }
 
   return (
-    <section aria-label="ESGE station checklist" className="space-y-2.5">
+    <section id={id} aria-label="ESGE station checklist" className="space-y-2.5">
       {isSimulatedModel(stations.modelVersion) && <SimulatedBadge />}
       <span id={hintId} className="sr-only">
         Press to cycle the manual mark: confirm, reject, clear.
@@ -270,9 +272,9 @@ export function StationChecklist({ stations, ended = false, onToggle }: StationC
                     aria-label={accessibleName(key, state, at, auto)}
                     aria-describedby={hintId}
                     onClick={() => onToggle?.(i)}
-                    className={`grid w-full grid-cols-[1.1rem_minmax(0,1fr)_14px_2.4rem] items-center gap-2 border-l-2 px-1.5 py-[5px] text-left transition-colors hover:bg-ws-raised focus-visible:outline focus-visible:outline-1 focus-visible:outline-ws-detect ${
-                      isCurrent ? "border-ws-detect bg-ws-surface" : "border-transparent"
-                    } ${overdue ? "text-ws-coach" : "text-ws-faint"}`}
+                    className={`grid w-full grid-cols-[1.1rem_minmax(0,1fr)_14px_2.4rem] items-center gap-2 px-1.5 py-[5px] text-left transition-colors hover:bg-ws-raised focus-visible:outline focus-visible:outline-1 focus-visible:outline-ws-detect ${
+                      overdue ? "text-ws-coach" : "text-ws-faint"
+                    }`}
                   >
                     <span className="font-mono text-[11px] tabular-nums">{i + 1}</span>
                     <span
