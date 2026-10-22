@@ -64,15 +64,28 @@ Only masked 320 px canvases and the manifest leave the laptop. Never copy
 `data/landmarks/` (raw video with burned-in dates and serials) or
 `data/landmarks_private/audit/` (OSD OCR with dates and scope serials).
 
+The training code reads the cache and manifest from fixed paths inside the
+repo checkout (`common.CACHE_ROOT`, `common.MANIFEST_PATH`), so copy them to
+the SAME relative paths on the GPU box (or symlink those paths to wherever
+the data lives).
+
+macOS ships openrsync (rsync 2.6.9 compatible), which has neither `--mkpath`
+nor `--info=progress2`, so the target directories are created over ssh first.
+
 ```bash
 cd /path/to/peace-web-prototype
-GPU=user@gpu-box:/data/peace/landmarks
-rsync -a --partial --info=progress2 --exclude '_parts/' \
-  ml-backend/training/landmarks/cache/v1/ "$GPU/cache/v1/"
-rsync -a data/landmarks_private/manifest_v1.csv "$GPU/"
-# on the GPU box: check the transfer
-python -c "import json;print(json.load(open('/data/peace/landmarks/cache/v1/CACHE_INFO.json'))['counts'])"
-sha256sum /data/peace/landmarks/cache/v1/frames.csv.gz   # == CACHE_INFO frames_csv_sha256
+HOST=user@gpu-box
+DEST=/path/to/peace-web-prototype                  # the repo checkout on the box
+GPU=$HOST:$DEST
+ssh $HOST "mkdir -p $DEST/ml-backend/training/landmarks/cache/v1 \
+  $DEST/ml-backend/training/landmarks/cache/weights $DEST/data/landmarks_private"
+rsync -a --partial --stats --exclude '_parts/' \
+  ml-backend/training/landmarks/cache/v1/ "$GPU/ml-backend/training/landmarks/cache/v1/"
+rsync -a ml-backend/training/landmarks/cache/weights/ "$GPU/ml-backend/training/landmarks/cache/weights/"
+rsync -a data/landmarks_private/manifest_v1.csv "$GPU/data/landmarks_private/"
+# on the GPU box, from the repo root: check the transfer
+python -c "import json;print(json.load(open('ml-backend/training/landmarks/cache/v1/CACHE_INFO.json'))['counts'])"
+sha256sum ml-backend/training/landmarks/cache/v1/frames.csv.gz   # == CACHE_INFO frames_csv_sha256
 ```
 
 ## Modules
