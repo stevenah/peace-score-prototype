@@ -10,3 +10,10 @@ procs:
   s3:
     shell: docker compose up s3 s3-init
     autostart: false
+  # The ML backend on the GPU box, reached through an ssh tunnel: this tab
+  # starts uvicorn there and forwards it to localhost:8002 for as long as it
+  # runs. Point ML_BACKEND_URL and ML_BACKEND_PUBLIC_URL in .env at 8002 to
+  # use it; the box's firewall allows ssh only, which is why the tunnel.
+  gpu-ml:
+    shell: ssh -L 8002:localhost:8001 neo@10.0.0.150 'cd ~/code/peace-web-prototype/ml-backend && exec .venv/bin/python -m uvicorn app.main:app --port 8001'
+    autostart: false
