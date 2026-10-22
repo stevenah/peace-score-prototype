@@ -11,8 +11,8 @@
 # Development
 # -------------------------------------------------------------------
 
-dev: ## Run both frontend and ML backend (requires two terminals — use docker-up for single command)
-	@echo "Use 'make dev-web' (:3001) and 'make dev-ml' (:8001) in separate terminals, or 'make docker-up'"
+dev: ## Run the frontend and ML backend together in one terminal (mprocs; MinIO is a stopped tab)
+	mprocs
 
 dev-web: ## Start Next.js dev server (http://localhost:3001)
 	pnpm dev
@@ -118,7 +118,7 @@ bootstrap: ## Fresh clone -> runnable: deps, env, prisma client, migrations, see
 	pnpm exec prisma migrate deploy
 	pnpm run db:seed
 	@echo ""
-	@echo "Ready. Run 'make dev-web' (:3001) and 'make dev-ml' (:8001) in separate terminals."
+	@echo "Ready. Run 'make dev' (frontend :3001 and ML backend :8001 in one terminal)."
 
 # -------------------------------------------------------------------
 # Docker

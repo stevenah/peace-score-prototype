@@ -78,3 +78,103 @@ describe("signLiveToken", () => {
     expect(signLiveToken()).toBe(tokenContract.token);
   });
 });
+
+describe("fetchMlBackend with a GPU backend", () => {
+  const env = {
+    ML_BACKEND_URL: "http://fly:8000",
+    ML_BACKEND_GPU_URL: "http://[fdaa::1]:8000",
+    ML_API_KEY: "test-key",
+  };
+
+  function urls() {
+    return vi.mocked(fetch).mock.calls.map(([url]) => String(url));
+  }
+
+  it("asks the GPU backend first", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
+    const { fetchMlBackend } = await load(env);
+
+    const res = await fetchMlBackend("/api/v1/analyze/abc");
+
+    expect(res.status).toBe(200);
+    expect(urls()).toEqual(["http://[fdaa::1]:8000/api/v1/analyze/abc"]);
+    expect(lastFetchCall().headers.get("x-api-key")).toBe("test-key");
+  });
+
+  it("falls back to Fly when the box is unreachable, and rests it for a while", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError("fetch failed"))
+        .mockResolvedValue(new Response("{}")),
+    );
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(1_000_000);
+    const { fetchMlBackend } = await load(env);
+
+    await fetchMlBackend("/api/v1/health");
+    await fetchMlBackend("/api/v1/health");
+    expect(urls()).toEqual([
+      "http://[fdaa::1]:8000/api/v1/health",
+      "http://fly:8000/api/v1/health",
+      "http://fly:8000/api/v1/health",
+    ]);
+
+    vi.setSystemTime(1_000_000 + 31_000);
+    await fetchMlBackend("/api/v1/health");
+    expect(urls().at(-1)).toBe("http://[fdaa::1]:8000/api/v1/health");
+  });
+
+  it("treats a 5xx from the box like an outage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response("down", { status: 503 }))
+        .mockResolvedValue(new Response("{}")),
+    );
+    const { fetchMlBackend } = await load(env);
+
+    const res = await fetchMlBackend("/api/v1/analyze/abc");
+
+    expect(res.status).toBe(200);
+    expect(urls()).toEqual([
+      "http://[fdaa::1]:8000/api/v1/analyze/abc",
+      "http://fly:8000/api/v1/analyze/abc",
+    ]);
+  });
+
+  it("asks the other backend on a 404, since a job lives where it ran", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response("no", { status: 404 }))
+        .mockResolvedValueOnce(new Response("{}"))
+        .mockResolvedValue(new Response("{}")),
+    );
+    const { fetchMlBackend } = await load(env);
+
+    const res = await fetchMlBackend("/api/v1/analyze/live_1");
+    expect(res.status).toBe(200);
+    expect(urls()).toEqual([
+      "http://[fdaa::1]:8000/api/v1/analyze/live_1",
+      "http://fly:8000/api/v1/analyze/live_1",
+    ]);
+
+    // A 404 is an answer, not an outage: the box is still asked first.
+    await fetchMlBackend("/api/v1/health");
+    expect(urls().at(-1)).toBe("http://[fdaa::1]:8000/api/v1/health");
+  });
+
+  it("returns the 404 when neither backend knows the id", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("no", { status: 404 })));
+    const { fetchMlBackend } = await load(env);
+
+    const res = await fetchMlBackend("/api/v1/analyze/nope");
+
+    expect(res.status).toBe(404);
+    expect(urls()).toHaveLength(2);
+  });
+});

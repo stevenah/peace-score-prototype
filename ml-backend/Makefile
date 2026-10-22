@@ -1,4 +1,4 @@
-.PHONY: train train-results help
+.PHONY: train train-results serve help
 
 SHELL := /bin/bash
 
@@ -22,6 +22,16 @@ train: ## Fine-tune every candidate on every dev fold (resumes: skips finished f
 	    | tee -a runs/train_$$c.log || exit 1; \
 	done; done
 	@$(MAKE) --no-print-directory train-results
+
+# -------------------------------------------------------------------
+# Serving the production web app from this machine — README, "Using the GPU
+# box for compute". Binds IPv6 because peace-frontend arrives over the Fly
+# private network (WireGuard); port 8000 matches the Fly machine.
+# -------------------------------------------------------------------
+
+serve: ## Serve the API on [::]:8000 for peace-frontend, with settings from gpu-box.env
+	@test -f gpu-box.env || { echo "Copy gpu-box.env.example to gpu-box.env and fill it in."; exit 1; }
+	@set -a; . ./gpu-box.env; set +a; $(PY) -m uvicorn app.main:app --host :: --port 8000
 
 train-results: ## Held-out clip macro-F1 per candidate and fold
 	@$(PY) -c "import glob, json; \

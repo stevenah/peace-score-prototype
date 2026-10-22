@@ -45,6 +45,7 @@ next-env.d.ts
 
 # python
 ml-backend/.venv/
+ml-backend/gpu-box.env
 ml-backend/__pycache__/
 ml-backend/**/__pycache__/
 ml-backend/experiments/

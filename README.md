@@ -27,12 +27,15 @@ the admin account (`admin@peace.dev` / `admin123`, local only).
 
 ### Run it
 
-Two terminals:
-
 ```bash
-make dev-web   # http://localhost:3001
-make dev-ml    # http://localhost:8001  (docs at /docs)
+make dev
 ```
+
+That runs [mprocs](https://github.com/pvolok/mprocs) (`brew install mprocs`)
+with the frontend on <http://localhost:3001> and the ML backend on
+<http://localhost:8001> (API docs at `/docs`) as two tabs, plus a stopped
+MinIO tab for when uploads are needed. Without mprocs, `make dev-web` and
+`make dev-ml` are the same two commands in two terminals.
 
 ### Video storage
 
@@ -143,6 +146,48 @@ GitHub Actions needs one secret, `FLY_API_TOKEN`.
 With `PEACE_API_KEY` set, the ML backend refuses analyze requests that lack it
 and live sockets that lack a token from the web app. Locally both keys are
 unset and nothing is checked.
+
+### Using the GPU box for compute
+
+The Fly ML machine is a shared two-CPU box. When the GPU box at home is up,
+the web app sends analysis there instead and only falls back to the Fly
+machine when the box does not answer.
+
+The box is a WireGuard peer on the Fly organisation's private network
+(`oslo-home-wg`, `fdaa:6:1210:a7b:8cfe:0:a:602`, listed by
+`fly wireguard list personal`), so `peace-frontend` reaches it directly and
+nothing on the box is exposed to the internet. The live WebSocket still goes
+to the Fly machine, because the browser cannot reach the private network.
+
+On the box, once:
+
+```bash
+sudo wg-quick up /path/to/oslo-home-wg.conf   # the peer config from `fly wireguard create`
+cd ml-backend && cp gpu-box.env.example gpu-box.env   # then fill it in
+```
+
+Then whenever it should take the work: `make serve` in `ml-backend/`, and on
+the web app, once:
+
+```bash
+fly secrets set ML_BACKEND_GPU_URL='http://[fdaa:6:1210:a7b:8cfe:0:a:602]:8000' -a peace-frontend
+```
+
+Stopping `make serve` is enough to hand back to Fly: a request waits at most
+four seconds for the box, then uses the Fly machine, and the box is retried
+every thirty seconds. `fly secrets unset ML_BACKEND_GPU_URL -a peace-frontend`
+switches the preference off entirely.
+
+An analysis is stored by the backend that ran it. The web app asks the other
+backend when one says it has never heard of an id, so results from both are
+readable as long as both answer; results of analyses run on the box are not
+readable while the box is off. The admin page's Models tab likewise shows
+whichever backend answers first.
+
+The peer was created with the `iad` gateway; recreating it with `ams`
+(`fly wireguard remove personal oslo-home-wg`, then
+`fly wireguard create personal ams oslo-home-wg`, and a new `.conf` on the
+box) shortens the path from Amsterdam.
 
 ### Giving someone access
 
