@@ -2,7 +2,7 @@
        lint typecheck check install install-web install-ml \
        db-push db-generate db-studio \
        docker-up docker-down docker-build \
-       minio-up infra-up infra-down bootstrap \
+       s3-up infra-up infra-down bootstrap \
        train-landmarks train-landmarks-results \
        deploy prod-status \
        clean
@@ -11,7 +11,7 @@
 # Development
 # -------------------------------------------------------------------
 
-dev: ## Run the frontend and ML backend together in one terminal (mprocs; MinIO is a stopped tab)
+dev: ## Run the frontend and ML backend together in one terminal (mprocs; the local S3 is a stopped tab)
 	mprocs
 
 dev-web: ## Start Next.js dev server (http://localhost:3001)
@@ -95,16 +95,16 @@ db-studio: ## Open Prisma Studio
 	pnpm exec prisma studio
 
 # -------------------------------------------------------------------
-# Local infrastructure (MinIO only — the database is a SQLite file)
+# Local infrastructure (a local S3 only — the database is a SQLite file)
 # -------------------------------------------------------------------
 
-minio-up: ## Start MinIO S3 (API localhost:9000, console localhost:9001)
-	docker compose up -d minio minio-init
+s3-up: ## Start the local S3 (RustFS: API localhost:9000, console localhost:9001) and create the bucket
+	docker compose up -d s3 s3-init
 
-infra-up: minio-up ## Start local infrastructure
+infra-up: s3-up ## Start local infrastructure
 
 infra-down: ## Stop local infrastructure
-	docker compose stop minio
+	docker compose stop s3
 
 # -------------------------------------------------------------------
 # Bootstrap
@@ -124,7 +124,7 @@ bootstrap: ## Fresh clone -> runnable: deps, env, prisma client, migrations, see
 # Docker
 # -------------------------------------------------------------------
 
-docker-up: ## Start MinIO, the ML backend and the frontend with docker compose
+docker-up: ## Start the local S3, the ML backend and the frontend with docker compose
 	docker compose up
 
 docker-up-d: ## Start all services in background

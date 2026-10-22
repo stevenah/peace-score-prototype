@@ -4,7 +4,7 @@ Next.js frontend + FastAPI ML backend for endoscopy video analysis.
 
 ## Local setup
 
-Ports: **frontend 3001**, **ML backend 8001**, MinIO 9000/9001.
+Ports: **frontend 3001**, **ML backend 8001**, local S3 9000/9001.
 (3000 and 8000 are deliberately avoided — they collide with other projects.)
 
 The web app's database is a SQLite file (`dev.db` locally, a Fly volume in
@@ -34,7 +34,7 @@ make dev
 That runs [mprocs](https://github.com/pvolok/mprocs) (`brew install mprocs`)
 with the frontend on <http://localhost:3001> and the ML backend on
 <http://localhost:8001> (API docs at `/docs`) as two tabs, plus a stopped
-MinIO tab for when uploads are needed. Without mprocs, `make dev-web` and
+`s3` tab for when uploads are needed. Without mprocs, `make dev-web` and
 `make dev-ml` are the same two commands in two terminals.
 
 ### Video storage
@@ -42,9 +42,15 @@ MinIO tab for when uploads are needed. Without mprocs, `make dev-web` and
 Uploads go straight from the browser to S3 via a presigned URL, so uploads and
 playback need object storage. Two options:
 
-- **Fully local (no AWS):** `make minio-up`, then uncomment the MinIO block at
-  the bottom of `.env`. Both S3 clients honour `S3_ENDPOINT` /
+- **Fully local (no AWS):** `make s3-up` (or start the `s3` tab in `make dev`)
+  runs [RustFS](https://github.com/rustfs/rustfs) in Docker with a
+  `peace-videos` bucket, then uncomment the local block at the bottom of
+  `.env` and set the same four values with the `PEACE_` prefix in
+  `ml-backend/.env`. Both S3 clients honour `S3_ENDPOINT` /
   `PEACE_S3_ENDPOINT` and switch to path-style addressing automatically.
+  RustFS replaced MinIO here in October 2026, after MinIO withdrew its
+  images from Docker Hub and quay.io; it speaks the same API on the same
+  ports.
 - **Real AWS:** leave `S3_ENDPOINT` unset and fill in the AWS keys.
 
 Everything else — auth, analysis history, live frame analysis — works without
@@ -56,8 +62,8 @@ object storage configured.
 make docker-up
 ```
 
-Brings up MinIO, the ML backend and the frontend, already wired to each
-other. Frontend on 3001, ML backend on 8001. The frontend's SQLite file lives
+Brings up the local S3, the ML backend and the frontend, already wired to
+each other. Frontend on 3001, ML backend on 8001. The frontend's SQLite file lives
 in `.docker-data/web/`.
 
 ## Common tasks
@@ -166,17 +172,12 @@ sudo wg-quick up /path/to/oslo-home-wg.conf   # the peer config from `fly wiregu
 cd ml-backend && cp gpu-box.env.example gpu-box.env   # then fill it in
 ```
 
-Then whenever it should take the work: `make serve` in `ml-backend/`, and on
-the web app, once:
-
-```bash
-fly secrets set ML_BACKEND_GPU_URL='http://[fdaa:6:1210:a7b:8cfe:0:a:602]:8000' -a peace-frontend
-```
-
-Stopping `make serve` is enough to hand back to Fly: a request waits at most
-four seconds for the box, then uses the Fly machine, and the box is retried
-every thirty seconds. `fly secrets unset ML_BACKEND_GPU_URL -a peace-frontend`
-switches the preference off entirely.
+Then whenever it should take the work, `make serve` in `ml-backend/`. That is
+the whole switch: the web app's `fly.toml` already names the box as
+`ML_BACKEND_GPU_URL`, and a request waits at most 2.5 seconds for it before
+using the Fly machine, after which the box is retried once a minute. Stopping
+`make serve` hands the work back. To drop the preference entirely, remove the
+line from `fly.toml`.
 
 An analysis is stored by the backend that ran it. The web app asks the other
 backend when one says it has never heard of an id, so results from both are

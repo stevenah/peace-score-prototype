@@ -1,12 +1,12 @@
 # `make dev`, or just `mprocs`: the frontend and the ML backend in one
-# terminal, one tab each. MinIO is only needed for uploads, so its tab starts
-# stopped; select it and press "s" when you want it.
+# terminal, one tab each. The local S3 (RustFS, in Docker) is only needed for
+# uploads, so its tab starts stopped; select it and press "s" when you want it.
 procs:
   web:
     shell: pnpm dev
   ml:
     shell: uv run uvicorn app.main:app --reload --port 8001
     cwd: ml-backend
-  minio:
-    shell: docker compose up minio minio-init
+  s3:
+    shell: docker compose up s3 s3-init
     autostart: false

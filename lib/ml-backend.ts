@@ -19,11 +19,12 @@ const LIVE_TOKEN_TTL_SECONDS = 300;
 /**
  * How long a request to the GPU box may take before it counts as down. The
  * analysis endpoints answer at once and do the work in the backend's worker,
- * so this is a reachability limit, not a compute budget.
+ * so this is a reachability limit, not a compute budget. The box is usually
+ * off, so this is also the most a visitor waits once a minute.
  */
-const GPU_TIMEOUT_MS = 4000;
+const GPU_TIMEOUT_MS = 2500;
 /** After a failure, how long requests skip the GPU box before trying it again. */
-const GPU_RETRY_AFTER_MS = 30_000;
+const GPU_RETRY_AFTER_MS = 60_000;
 let gpuDownUntil = 0;
 
 function withKey(init?: RequestInit): RequestInit {

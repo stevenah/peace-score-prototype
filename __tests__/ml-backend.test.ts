@@ -121,7 +121,7 @@ describe("fetchMlBackend with a GPU backend", () => {
       "http://fly:8000/api/v1/health",
     ]);
 
-    vi.setSystemTime(1_000_000 + 31_000);
+    vi.setSystemTime(1_000_000 + 61_000);
     await fetchMlBackend("/api/v1/health");
     expect(urls().at(-1)).toBe("http://[fdaa::1]:8000/api/v1/health");
   });
